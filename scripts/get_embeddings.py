@@ -8,7 +8,9 @@ class AudioArgs(ParamsProto):
     # model_str = Proto(type=str, default='', help='Model to use for embeddings.')
 
 def get_embeddings(audio_path):
-    """Returns the embeddings of the audio file at the given path."""
+    """
+    Returns the embeddings of the audio file at the given path.
+    """
     print("Getting embeddings for audio file at path: {}".format(AudioArgs.source_path))
     wave_form, sample_rate = torchaudio.load(AudioArgs.source_path)
     wave_form = torch.mean(wave_form, dim=0)
