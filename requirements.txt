@@ -1,0 +1,170 @@
+appdirs==1.4.4
+argcomplete==3.0.5
+audioread==3.0.0
+certifi==2022.12.7
+cffi==1.15.1
+charset-normalizer==3.1.0
+cmake==3.26.3
+contourpy==1.0.7
+cycler==0.11.0
+decorator==5.1.1
+expandvars==0.9.0
+filelock==3.12.0
+fonttools==4.39.3
+idna==3.4
+importlib-metadata==6.5.0
+importlib-resources==5.12.0
+Jinja2==3.1.2
+joblib==1.2.0
+kiwisolver==1.4.4
+lazy_loader==0.2
+librosa==0.10.0.post2
+lit==16.0.1
+llvmlite==0.39.1
+MarkupSafe==2.1.2
+matplotlib==3.7.1
+mpmath==1.3.0
+msgpack==1.0.5
+networkx==3.1
+numba==0.56.4
+numpy==1.23.5
+nvidia-cublas-cu11==11.10.3.66
+nvidia-cuda-cupti-cu11==11.7.101
+nvidia-cuda-nvrtc-cu11==11.7.99
+nvidia-cuda-runtime-cu11==11.7.99
+nvidia-cudnn-cu11==8.5.0.96
+nvidia-cufft-cu11==10.9.0.58
+nvidia-curand-cu11==10.2.10.91
+nvidia-cusolver-cu11==11.4.0.1
+nvidia-cusparse-cu11==11.7.4.91
+nvidia-nccl-cu11==2.14.3
+nvidia-nvtx-cu11==11.7.91
+packaging==23.1
+params-proto==2.10.9
+Pillow==9.5.0
+pooch==1.6.0
+pycparser==2.21
+pyparsing==3.0.9
+python-dateutil==2.8.2
+requests==2.28.2
+scikit-learn==1.2.2
+scipy==1.10.1
+six==1.16.0
+soundfile==0.12.1
+soxr==0.3.5
+sympy==1.11.1
+termcolor==2.2.0
+threadpoolctl==3.1.0
+torch==2.0.0
+torchaudio==2.0.1
+triton==2.0.0
+typing==3.7.4.3
+typing_extensions==4.5.0
+urllib3==1.26.15
+waterbear==2.6.6
+wav2clip==0.1.0
+zipp==3.15.0
+(audio) alanyu@frigg2:~/cv-class/audio-localization/audio$ ls
+examples  get_embeddings.py  requirements.txt
+(audio) alanyu@frigg2:~/cv-class/audio-localization/audio$ gits
+fatal: not a git repository (or any of the parent directories): .git
+(audio) alanyu@frigg2:~/cv-class/audio-localization/audio$ mv requirements.txt ..
+(audio) alanyu@frigg2:~/cv-class/audio-localization/audio$ ls
+examples  get_embeddings.py
+(audio) alanyu@frigg2:~/cv-class/audio-localization/audio$ cd ..
+(audio) alanyu@frigg2:~/cv-class/audio-localization$ ls
+audio  README.md  requirements.txt  scripts
+(audio) alanyu@frigg2:~/cv-class/audio-localization$ ls
+audio  README.md  requirements.txt  scripts
+(audio) alanyu@frigg2:~/cv-class/audio-localization$ cd ..
+(audio) alanyu@frigg2:~/cv-class$ ls
+audio-localization  ps1  pset3  pset4  pset5  pset6
+(audio) alanyu@frigg2:~/cv-class$ cd ..
+(audio) alanyu@frigg2:~$ ls
+alan-stuff           lab.jpg                  Pictures           Templates
+brian.MOV            lab.png                  pig.pn             test.py
+cv-class             main                     processed_brian    transforms.json
+data                 miniconda3               proj_big.pt        Videos
+datasets             Music                    proj_medium.pt     walk-these-ways
+Desktop              nerfstudio               proj.pt            william_cam.json
+Documents            nerfstudio-private       Public             working.jpg
+Downloads            nerfstudio-will-outputs  results.pt         workspace
+isaacgym             outputs                  results_up.pickle
+IsaacGymEnvs         params_proto             RN50.pth
+IsaacGymEnvs-backup  pic.jpg                  snap
+(audio) alanyu@frigg2:~$ cd cv-class/
+(audio) alanyu@frigg2:~/cv-class$ ls
+audio-localization  ps1  pset3  pset4  pset5  pset6
+(audio) alanyu@frigg2:~/cv-class$ rm -r audio-localization/
+(audio) alanyu@frigg2:~/cv-class$ ls
+audio-localization  ps1  pset3  pset4  pset5  pset6
+(audio) alanyu@frigg2:~/cv-class$ cd audio-localization/
+(audio) alanyu@frigg2:~/cv-class/audio-localization$ ls
+README.md  scripts
+(audio) alanyu@frigg2:~/cv-class/audio-localization$ pip freeze
+appdirs==1.4.4
+argcomplete==3.0.5
+audioread==3.0.0
+certifi==2022.12.7
+cffi==1.15.1
+charset-normalizer==3.1.0
+cmake==3.26.3
+contourpy==1.0.7
+cycler==0.11.0
+decorator==5.1.1
+expandvars==0.9.0
+filelock==3.12.0
+fonttools==4.39.3
+idna==3.4
+importlib-metadata==6.5.0
+importlib-resources==5.12.0
+Jinja2==3.1.2
+joblib==1.2.0
+kiwisolver==1.4.4
+lazy_loader==0.2
+librosa==0.10.0.post2
+lit==16.0.1
+llvmlite==0.39.1
+MarkupSafe==2.1.2
+matplotlib==3.7.1
+mpmath==1.3.0
+msgpack==1.0.5
+networkx==3.1
+numba==0.56.4
+numpy==1.23.5
+nvidia-cublas-cu11==11.10.3.66
+nvidia-cuda-cupti-cu11==11.7.101
+nvidia-cuda-nvrtc-cu11==11.7.99
+nvidia-cuda-runtime-cu11==11.7.99
+nvidia-cudnn-cu11==8.5.0.96
+nvidia-cufft-cu11==10.9.0.58
+nvidia-curand-cu11==10.2.10.91
+nvidia-cusolver-cu11==11.4.0.1
+nvidia-cusparse-cu11==11.7.4.91
+nvidia-nccl-cu11==2.14.3
+nvidia-nvtx-cu11==11.7.91
+packaging==23.1
+params-proto==2.10.9
+Pillow==9.5.0
+pooch==1.6.0
+pycparser==2.21
+pyparsing==3.0.9
+python-dateutil==2.8.2
+requests==2.28.2
+scikit-learn==1.2.2
+scipy==1.10.1
+six==1.16.0
+soundfile==0.12.1
+soxr==0.3.5
+sympy==1.11.1
+termcolor==2.2.0
+threadpoolctl==3.1.0
+torch==2.0.0
+torchaudio==2.0.1
+triton==2.0.0
+typing==3.7.4.3
+typing_extensions==4.5.0
+urllib3==1.26.15
+waterbear==2.6.6
+wav2clip==0.1.0
+zipp==3.15.0
