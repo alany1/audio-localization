@@ -5,6 +5,11 @@ from PIL import Image
 from features import clip
 import torch
 import torchvision.io as io
+from torchvision.transforms import CenterCrop, Compose
+
+
+patch_size = {"RN50": 32, "RN101": 32, "RN50x4": None, "RN50x16": 8, "ViT-B/32": 32, "ViT-B/16": 16, "ViT-B/8": 8,
+              "ViT-L/32": 32, "ViT-L/16": 16, "ViT-L/8": 8, "ViT-H/14": 14, "ViT-H/7": 7, "ViT-L/14@336px": 14}
 class VideoArgs(ParamsProto):
     start_frame: int = Proto(help='Start frame of the video.')
     end_frame: int = Proto(help='End frame of the video.')
@@ -13,8 +18,9 @@ class VideoArgs(ParamsProto):
     num_frames: int = Proto(default=1, help='Number of frames to extract from the video.')
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = "ViT-B/32"
-    patch_size = 32
-
+    # model = "RN50x64"
+    patch_size = patch_size[model]
+    high_res = True
 def get_frame_embeddings():
     import torch
     # Load the CLIP model
@@ -25,6 +31,14 @@ def get_frame_embeddings():
     print("Loaded CLIP model on device: {}".format(VideoArgs.device))
     video_tensor, audio, info = io.read_video(VideoArgs.source_path, pts_unit='sec')
     print("Frames count = {}".format(video_tensor.shape[0]))
+
+    # TODO: support arbitrary user specified image sizes? Rather than the resize in the preprocess
+    if VideoArgs.high_res:
+        # Check there is exactly one center crop transform
+        is_center_crop = [isinstance(t, CenterCrop) for t in preprocess.transforms]
+        assert sum(is_center_crop) == 1, "There should be exactly one CenterCrop transform"
+        # Create new preprocess without center crop
+        preprocess = Compose([t for t in preprocess.transforms if not isinstance(t, CenterCrop)])
 
     images = [Image.fromarray(frame.numpy(), mode='RGB') for frame in video_tensor]
     # Preprocess each image
@@ -42,8 +56,9 @@ def get_frame_embeddings():
 
     # Reshape patch_embeddings into (N, 24, 24, embedding_dim)
     # patch_size = model.visual.conv1[0].kernel_size[0]
-    output_size = preprocessed_images.shape[-1] // VideoArgs.patch_size
-    patch_embeddings = patch_embeddings.reshape(-1, output_size, output_size, patch_embeddings.shape[-1])
+    output_h = preprocessed_images.shape[-2] // VideoArgs.patch_size
+    output_w = preprocessed_images.shape[-1] // VideoArgs.patch_size
+    patch_embeddings = patch_embeddings.reshape(-1, output_h, output_w, patch_embeddings.shape[-1])
 
     return patch_embeddings, preprocess
 
@@ -56,6 +71,7 @@ def visualize_embeddings(embedding):
     from sklearn.decomposition import PCA
 
     # Reshape the embedding into (N, embedding_dim)
+    h,w = embedding.shape[1:3]
     embedding = embedding.reshape(-1, embedding.shape[-1])
 
     # Apply PCA to reduce the dimensionality of the embedding
@@ -64,7 +80,7 @@ def visualize_embeddings(embedding):
     embedding = torch.from_numpy(pca.transform(embedding.detach().cpu().numpy()))
 
     # Reshape the embedding back into (N, 24, 24, 3)
-    embedding = embedding.reshape(-1, 14, 14, 3)
+    embedding = embedding.reshape(-1, h, w, 3)
     return embedding
 
 if __name__ == '__main__':

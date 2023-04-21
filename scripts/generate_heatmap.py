@@ -39,6 +39,10 @@ if __name__ == '__main__':
 
     AudioArgs.audio_path = 'examples/car-ignition.wav'
     VideoArgs.source_path = 'examples/driving-2.mp4'
+    
+    # AudioArgs.audio_path = 'examples/ocean-wave-1.wav'
+    # VideoArgs.source_path = 'examples/beach.mov'
+
     VideoArgs.num_frames = 145
     VideoArgs.batch_size = 1
 
@@ -50,7 +54,7 @@ if __name__ == '__main__':
     #$ Save a video of the frames as well
     video_tensor, audio, info = io.read_video(VideoArgs.source_path, pts_unit='sec')
     # Resize and center crop video_tensor to 224x224
-    video_tensor = torch.nn.functional.interpolate(video_tensor.permute(0, 3, 1, 2), size=(224, 224), mode='bilinear').permute(0, 2, 3, 1)
+    # video_tensor = torch.nn.functional.interpolate(video_tensor.permute(0, 3, 1, 2), size=(h, w), mode='bilinear').permute(0, 2, 3, 1)
 
     io.write_video('results/output_frames.mp4', video_tensor, fps=info['video_fps'])# , video_codec='libx264', options={'crf': 18} , audio_array=None, audio_fps=44100)
 

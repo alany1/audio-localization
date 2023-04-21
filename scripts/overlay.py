@@ -21,7 +21,8 @@ if __name__ == "__main__":
     frame_size2 = (int(video2.get(cv2.CAP_PROP_FRAME_WIDTH)), int(video2.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
     # Set the output video size
-    output_size = (224, 224)
+    # output_size = (224, 224)
+    output_size = frame_size1
 
     # Create the output video writer
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
