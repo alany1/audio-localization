@@ -4,7 +4,7 @@ import torch, torchaudio
 import numpy as np
 
 class AudioArgs(ParamsProto):
-    source_path: str = Proto(help='Path to the audio file.')
+    audio_path: str = Proto(help='Path to the audio file.')
     # model_str = Proto(type=str, default='', help='Model to use for embeddings.')
 
 def get_audio_embeddings(audio_path):
@@ -19,5 +19,5 @@ def get_audio_embeddings(audio_path):
     return wav2clip.embed_audio(np.array(wave_form), model)
 
 if __name__ == '__main__':
-    AudioArgs.source_path = 'examples/ocean-wave-1.wav'
-    print(get_audio_embeddings(AudioArgs.source_path).shape)
+    AudioArgs.audio_path = 'examples/ocean-wave-1.wav'
+    print(get_audio_embeddings(AudioArgs.audio_path).shape)
