@@ -12,7 +12,8 @@ class VideoArgs(ParamsProto):
     batch_size: int = Proto(help='Batch size for the video.')
     num_frames: int = Proto(default=1, help='Number of frames to extract from the video.')
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = "ViT-B/16"
+    model = "ViT-B/32"
+    patch_size = 32
 
 def get_frame_embeddings():
     import torch
@@ -40,9 +41,11 @@ def get_frame_embeddings():
     patch_embeddings = torch.cat(patch_embeddings, dim=0)
 
     # Reshape patch_embeddings into (N, 24, 24, embedding_dim)
-    patch_embeddings = patch_embeddings.reshape(-1, 14, 14, patch_embeddings.shape[-1])
+    # patch_size = model.visual.conv1[0].kernel_size[0]
+    output_size = preprocessed_images.shape[-1] // VideoArgs.patch_size
+    patch_embeddings = patch_embeddings.reshape(-1, output_size, output_size, patch_embeddings.shape[-1])
 
-    return patch_embeddings
+    return patch_embeddings, preprocess
 
 def visualize_embeddings(embedding):
     """
@@ -80,7 +83,7 @@ if __name__ == '__main__':
     # model = wav2clip.get_model(frame_length=16000, hop_length=16000)
 
     # frame_pil = Image.fromarray(video_tensor[0].numpy(), mode='RGB')
-    embeddings = get_frame_embeddings()
+    embeddings, _ = get_frame_embeddings()
 
     viz = visualize_embeddings(embeddings).detach().cpu().numpy()
     plt.imshow(viz[0])
