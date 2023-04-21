@@ -19,5 +19,6 @@ def get_audio_embeddings(audio_path):
     return wav2clip.embed_audio(np.array(wave_form), model)
 
 if __name__ == '__main__':
-    AudioArgs.audio_path = 'examples/ocean-wave-1.wav'
+    # AudioArgs.audio_path = 'examples/ocean-wave-1.wav'
+    AudioArgs.audio_path = 'examples/car-ignition.wav'
     print(get_audio_embeddings(AudioArgs.audio_path).shape)

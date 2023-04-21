@@ -37,9 +37,9 @@ if __name__ == '__main__':
     import torch
     import torchvision
 
-    AudioArgs.audio_path = 'examples/ocean-wave-1.wav'
-    VideoArgs.source_path = 'examples/beach.mov'
-    VideoArgs.num_frames = 265
+    AudioArgs.audio_path = 'examples/car-ignition.wav'
+    VideoArgs.source_path = 'examples/driving-2.mp4'
+    VideoArgs.num_frames = 145
     VideoArgs.batch_size = 1
 
     hm, preprocess = makeHeatmap()
