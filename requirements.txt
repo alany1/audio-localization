@@ -28,17 +28,6 @@ msgpack==1.0.5
 networkx==3.1
 numba==0.56.4
 numpy==1.23.5
-nvidia-cublas-cu11==11.10.3.66
-nvidia-cuda-cupti-cu11==11.7.101
-nvidia-cuda-nvrtc-cu11==11.7.99
-nvidia-cuda-runtime-cu11==11.7.99
-nvidia-cudnn-cu11==8.5.0.96
-nvidia-cufft-cu11==10.9.0.58
-nvidia-curand-cu11==10.2.10.91
-nvidia-cusolver-cu11==11.4.0.1
-nvidia-cusparse-cu11==11.7.4.91
-nvidia-nccl-cu11==2.14.3
-nvidia-nvtx-cu11==11.7.91
 packaging==23.1
 params-proto==2.10.9
 Pillow==9.5.0
@@ -57,7 +46,6 @@ termcolor==2.2.0
 threadpoolctl==3.1.0
 torch==2.0.0
 torchaudio==2.0.1
-triton==2.0.0
 typing==3.7.4.3
 typing_extensions==4.5.0
 urllib3==1.26.15
