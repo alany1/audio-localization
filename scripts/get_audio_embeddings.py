@@ -6,6 +6,9 @@ import cv2
 import clip
 from PIL import Image
 from torch.nn import CosineSimilarity
+import time
+import matplotlib
+import matplotlib.pyplot as plt
 
 class FileArgs(ParamsProto):
     source_path: str = Proto(help='Path to the audio file.')
@@ -49,8 +52,6 @@ def get_patch_embeddings(patch: Image):
     """
     Returns the embeddings of the given patch frame
     """
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, preprocess = clip.load("ViT-B/32", device=device)
     image = preprocess(patch).unsqueeze(0).to(device)
     with torch.no_grad():
         image_features = model.encode_image(image)
@@ -70,17 +71,18 @@ def get_patch(img_frame: Image, patch_size, x, y):
     return img_frame.crop((left, top, right, bottom))
 
 
-def get_image_embeddings(img_frame: Image, patch_size):
+def get_image_embeddings(img_frame: Image, patch_size, stride):
     img_width, img_height = img_frame.size
     img_embeddings = torch.zeros((img_height, img_width, 512))
-    for j in range(img_height):
-        for i in range(img_width):
-            print(i)
-            img_embeddings[j, i] = get_patch_embeddings(get_patch(img_frame, patch_size, i, j))
+    for j in range(0, img_height, stride):
+        print(j)
+        for i in range(0, img_width, stride):
+            img_embeddings[j:j+stride, i:i+stride] = get_patch_embeddings(get_patch(img_frame, patch_size, i, j))
+    return img_embeddings
 
 
-def get_similarity(embedding_1, embedding_2):
-    return embedding_1 @ embedding_2
+def get_similarity(audio, img):
+    return img @ audio
 
 
 def get_image_heatmap(audio_embedding, img_embeddings):
@@ -110,13 +112,31 @@ if __name__ == '__main__':
     audio_clip = get_audio_embeddings(audio_file.source_path)
     frames = VideoFrames(video_file.source_path)
     first_frame = next(frames)
+    print(first_frame.size)
 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, preprocess = clip.load("ViT-B/32", device=device)
+    # test using patches
     patch_size = 32
-    frame_embeds = get_image_embeddings(first_frame, 32)
-    frame_heatmap = get_image_heatmap(audio_clip, frame_embeds)
-    plot_heatmap(frame_heatmap, first_frame)
+    # t_start = time.time()
+    # frame_embeds = get_image_embeddings(first_frame, 32, 16)
+    # torch.save(frame_embeds, 'scripts/inputs.t')
+    # print("total embedding time: ", time.time() - t_start)
+    # print(frame_embeds.shape)
 
-    # frame_clip = get_patch_embeddings(Image.fromarray(first_frame))
+    frame_embeds = torch.load('scripts/inputs.t')
+    frame_heatmap = get_image_heatmap(audio_clip, frame_embeds)
+    fig, ax = plt.subplots(figsize=(8,8))
+    im = ax.imshow(frame_heatmap)
+    cbar = ax.figure.colorbar(im, ax=ax)
+    plt.show()
+    # plot_heatmap(frame_heatmap, first_frame)
+
+    # test using full image
+    # t0 = time.time()
+    # frame_clip = get_patch_embeddings(first_frame)
+    # t1 = time.time()
+    # print(t1-t0)
     # similarity = 100.0 * frame_clip @ audio_clip
     # print(frame_clip.shape)
     # print(audio_clip.shape)
