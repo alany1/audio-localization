@@ -32,8 +32,8 @@ def overlay_heatmap(img, heatmap):
     """
     Overlays the heatmap on top of the specified image
     """
-    hm_img = Image.fromarray(heatmap)
-    return Image.blend(img, hm_img, 0.3)
+    hm_img = Image.fromarray(cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB))
+    return Image.blend(img, hm_img, 0.5)
 
 if __name__ == '__main__':
     # test image generation on a random heatmap

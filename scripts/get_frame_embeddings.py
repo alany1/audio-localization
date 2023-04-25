@@ -78,13 +78,16 @@ def get_image_embeddings(img_frame: Image, patch_size, stride, model, preprocess
     img_embeddings = torch.zeros((img_height, img_width, 512))
     for j in range(0, img_height, stride):
         print(j)
+        st = time.time()
         for i in range(0, img_width, stride):
             img_embeddings[j:j+stride, i:i+stride] = get_patch_embeddings(get_patch(img_frame, patch_size, i, j), model, preprocess, device)
+        print("time for one row: ", time.time() - st)
     return img_embeddings
 
 
 if __name__ == '__main__':
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    # device = "cpu"
     print(device)
     model, preprocess = clip.load("ViT-B/32", device=device)
 
