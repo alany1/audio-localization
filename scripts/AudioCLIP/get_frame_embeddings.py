@@ -165,13 +165,13 @@ if __name__ == "__main__":
 
 
     FrameArgs.output = "backup.pt"
-    # FrameArgs.video = "../examples/beach.mov"
-    FrameArgs.video = "../examples/driving-2.mp4"
+    FrameArgs.video = "../examples/beach.mov"
+    # FrameArgs.video = "../examples/driving-2.mp4"
     frame,image = main()
 
     # from get_audio_embeddings import Result
     if not FrameArgs.audio:
-        audio1 = torch.load("../examples/ignition.pt")
+        audio1 = torch.load("../examples/car_text.pt")
         # audio2 = torch.load("../examples/dirt.pt")
         # get l2 norm difference between the two audios
         # diff = np.linalg.norm(audio1-audio2)
