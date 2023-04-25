@@ -37,7 +37,7 @@ class VideoFrames():
         return self
 
 
-def get_patch_embeddings(patch: Image):
+def get_patch_embeddings(patch: Image, model, preprocess, device):
     """
     Returns the embeddings of the given patch frame as 1D tensor
     """
@@ -65,7 +65,7 @@ def get_patch(img_frame: Image, patch_size, x, y) -> Image:
     return img_frame.crop((left, top, right, bottom))
 
 
-def get_image_embeddings(img_frame: Image, patch_size, stride):
+def get_image_embeddings(img_frame: Image, patch_size, stride, model, preprocess, device):
     """
     Gets all patch embeddings for the specified image, subsequent
     patches are centered at pixels from the image separated by stride-number
@@ -79,12 +79,13 @@ def get_image_embeddings(img_frame: Image, patch_size, stride):
     for j in range(0, img_height, stride):
         print(j)
         for i in range(0, img_width, stride):
-            img_embeddings[j:j+stride, i:i+stride] = get_patch_embeddings(get_patch(img_frame, patch_size, i, j))
+            img_embeddings[j:j+stride, i:i+stride] = get_patch_embeddings(get_patch(img_frame, patch_size, i, j), model, preprocess, device)
     return img_embeddings
 
 
 if __name__ == '__main__':
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(device)
     model, preprocess = clip.load("ViT-B/32", device=device)
 
     video_file = FileArgs()
@@ -99,7 +100,7 @@ if __name__ == '__main__':
     # test using patches
     patch_size = 32
     t_start = time.time()
-    frame_embeds = get_image_embeddings(first_frame, 32, 16)
+    frame_embeds = get_image_embeddings(first_frame, 32, 16, model, preprocess, device)
     # save embedding to file
     torch.save(frame_embeds, 'scripts/inputs.t')
     # about 6 min for the single image
