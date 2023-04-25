@@ -8,7 +8,7 @@ def makeHeatmap():
     import torch
     import torch.nn.functional as F
     # Compute cosine similarity between target_feat and embedding for each point to generate heatmap
-    target_feat = torch.tensor(get_audio_embeddings(AudioArgs.audio_path), device = VideoArgs.device)
+    target_feat = torch.tensor(get_audio_embeddings(AudioArgs.audio_path), device=VideoArgs.device)
     embedding, preprocess = get_frame_embeddings()
 
     # Compute cosine similarity between each pixel of embedding and target_feat
@@ -19,12 +19,12 @@ def makeHeatmap():
 
     return heatmap, preprocess
 
-
     # heatmap = torch.einsum("ijk,kl->ijl", embedding, target_feat)
     # heatmap = F.normalize(heatmap, dim=2)
     # heatmap = torch.einsum("ijk,ijk->ij", heatmap, heatmap)
     # heatmap = heatmap / torch.max(heatmap)
     # return heatmap
+
 
 if __name__ == '__main__':
     from PIL import Image
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     AudioArgs.audio_path = 'examples/car-ignition.wav'
     VideoArgs.source_path = 'examples/driving-2.mp4'
-    
+
     # AudioArgs.audio_path = 'examples/ocean-wave-1.wav'
     # VideoArgs.source_path = 'examples/beach.mov'
 
@@ -51,12 +51,13 @@ if __name__ == '__main__':
     n_frames = len(hm)
     h, w = hm[0].shape
 
-    #$ Save a video of the frames as well
+    # $ Save a video of the frames as well
     video_tensor, audio, info = io.read_video(VideoArgs.source_path, pts_unit='sec')
     # Resize and center crop video_tensor to 224x224
     # video_tensor = torch.nn.functional.interpolate(video_tensor.permute(0, 3, 1, 2), size=(h, w), mode='bilinear').permute(0, 2, 3, 1)
 
-    io.write_video('results/output_frames.mp4', video_tensor, fps=info['video_fps'])# , video_codec='libx264', options={'crf': 18} , audio_array=None, audio_fps=44100)
+    io.write_video('results/output_frames.mp4', video_tensor, fps=info[
+        'video_fps'])  # , video_codec='libx264', options={'crf': 18} , audio_array=None, audio_fps=44100)
 
     # Convert to RGB using Jet colormap
     color_images = []

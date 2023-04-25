@@ -21,6 +21,7 @@ class VideoArgs(ParamsProto):
     # model = "RN50x64"
     patch_size = patch_size[model]
     high_res = True
+
 def get_frame_embeddings():
     import torch
     # Load the CLIP model

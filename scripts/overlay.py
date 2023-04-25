@@ -4,8 +4,8 @@ import numpy as np
 if __name__ == "__main__":
 
     import cv2
-
-    print("starting")
+    print("hey")
+    print('new')
     # Open the first video
     video1 = cv2.VideoCapture('results/output_frames.mp4')
 
