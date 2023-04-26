@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from scripts.AudioCLIP.model import AudioCLIP
 import time
+import shutil
 
 class FrameArgs(PrefixProto):
     IMAGE_SIZE = 224 # derived from CLIP, how to upscale the patches basically
@@ -116,15 +117,17 @@ def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames"):
 
     video_reader = io.read_video(FrameArgs.video_path, pts_unit='sec')
     video_tensor, audio_tensor, video_info = video_reader
-    images = [Image.fromarray(frame.numpy()) for frame in video_tensor[-1:]]
+    images = [Image.fromarray(frame.numpy()) for frame in video_tensor]
 
     w, h = images[0].size
 
+    print("Removing old temporary directory")
+    shutil.rmtree(tmp_dir)
+    print("Creating new temporary directory")
     os.mkdir(tmp_dir)
 
     # time this line
-    for x in range(num_frames):
-
+    for x in tqdm(range(num_frames), desc="Extracting image features for each frame 🎥📸", colour="green"):
         t0 = time.time()
         patches, stride_x, stride_y = extract_patches_rect(images[x], FrameArgs.patch_size, w // FrameArgs.downscale,
                                                            h // FrameArgs.downscale)
@@ -134,7 +137,7 @@ def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames"):
         all_patches = torch.stack([image_transforms(patch) for patch in patches])
 
         image_features = []
-        for i in tqdm(range(0, all_patches.shape[0], 8), desc="Extracting image features"):
+        for i in range(0, all_patches.shape[0], 8):
             image_features.append(model(image=all_patches[i:i + 8].to(FrameArgs.device)))
             # move back to CPU to reduce GPU memory usage
             image_features[-1] = image_features[-1][0][0][1].detach().cpu()
@@ -159,12 +162,13 @@ if __name__ == "__main__":
     aclp = AudioCLIP(pretrained=f'assets/{MODEL_FILENAME}')
     aclp.eval()
 
-    embeddings, new_w, new_h = get_frame_embeddings(aclp)
+    # embeddings, new_w, new_h = get_frame_embeddings(aclp)
+    tmp_dir, new_w, new_h, images = save_frame_embeddings(aclp, num_frames=100)
 
-    pre_viz = embeddings.reshape(new_w, new_h, -1)
-    viz = visualize_embeddings(pre_viz)
-
-    # normalize
-    viz = (viz - viz.min()) / (viz.max() - viz.min())
-
-    plt.imshow(viz[0])
+    # pre_viz = embeddings.reshape(new_w, new_h, -1)
+    # viz = visualize_embeddings(pre_viz)
+    #
+    # # normalize
+    # viz = (viz - viz.min()) / (viz.max() - viz.min())
+    #
+    # plt.imshow(viz[0])
