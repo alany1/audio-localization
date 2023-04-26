@@ -69,7 +69,7 @@ for path_to_audio in paths_to_audio:
 
 # paths_to_images = glob.glob('images/*.jpg')
 # Read video as a sequence of images using torchvision io
-video_path = '../examples/driving-2.mp4'
+video_path = '../examples/beach.mov'
 video_reader = io.read_video(video_path, pts_unit='sec')
 video_tensor, audio_tensor, video_info = video_reader
 images = [Image.fromarray(frame.numpy()) for frame in video_tensor[-1:]]
@@ -139,8 +139,8 @@ logits_image_text = scale_image_text * image_features @ text_features.T
 # plt.show()
 print(text)
 # plt.imshow(logits_audio_text.cpu().numpy().reshape(new_h, new_w), cmap='jet')
-plt.imshow(logits_image_text[:,0].cpu().numpy().reshape(new_h, new_w), cmap='jet')
-plt.show()
+# plt.imshow(logits_image_text[:,0].cpu().numpy().reshape(new_h, new_w), cmap='jet')
+# plt.show()
 
 plt.imshow(logits_audio_image.cpu().numpy().reshape(new_h, new_w), cmap='jet')
 plt.show()

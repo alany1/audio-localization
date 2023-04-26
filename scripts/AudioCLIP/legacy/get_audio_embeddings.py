@@ -4,16 +4,16 @@ from model.audioclip import AudioCLIP
 
 
 # Load the pre-trained model
-model = AudioCLIP(pretrained="AudioCLIP/assets/AudioCLIP-Full-Training.pt")
+model = AudioCLIP(pretrained="assets/AudioCLIP-Full-Training.pt")
 model.eval()
 for module in model.modules():
     module.eval()
 
 # Load an audio file
-# audio_path = "examples/ocean-wave-1.wav"
+audio_path = "../examples/ocean-wave-1.wav"
 # audio_path = "examples/car-ignition.wav"
 # audio_path = "examples/dirt.mp3"
-audio_path = "examples/chicken-1.wav"
+# audio_path = "examples/chicken-1.wav"
 
 waveform, sample_rate = torchaudio.load(audio_path)
 
@@ -34,5 +34,6 @@ with torch.no_grad():
 print("Audio embeddings shape:", audio_embeddings.shape)
 
 # save the result
-torch.save(audio_embeddings, "examples/chicken.pt")
-print("Audio embeddings saved to examples/test_audio.pt")
+save_path = "../examples/ocean.pt"
+torch.save(audio_embeddings, save_path)
+print("Saved to", save_path)

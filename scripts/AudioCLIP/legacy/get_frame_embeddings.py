@@ -165,18 +165,18 @@ if __name__ == "__main__":
 
 
     FrameArgs.output = "backup.pt"
-    FrameArgs.video = "../examples/beach.mov"
-    # FrameArgs.video = "../examples/driving-2.mp4"
+    # FrameArgs.video = "../examples/beach.mov"
+    FrameArgs.video = "../examples/driving-2.mp4"
     frame,image = main()
 
     # from get_audio_embeddings import Result
     if not FrameArgs.audio:
-        audio1 = torch.load("../examples/car_text.pt")
-        # audio2 = torch.load("../examples/dirt.pt")
+        # audio1 = torch.load("../examples/ocean.pt")
+        audio2 = torch.load("../examples/dirt.pt")
         # get l2 norm difference between the two audios
         # diff = np.linalg.norm(audio1-audio2)
         # print("L2 norm difference between the two audios: ", diff)
-        audio = audio1
+        audio = audio2
     else:
         raise NotImplementedError("Need to implement audio loading")
 
@@ -186,10 +186,12 @@ if __name__ == "__main__":
 
     # Plot cosine similarity between frame and audio along the 1024 dimension
 
-    fig, axs = plt.subplots(1,2)
+    fig, axs = plt.subplots(1,3)
 
+    # axs[0].imshow(cosine_similarity(frame[0], audio, dim=-1).numpy(), cmap='jet')
     axs[0].imshow(cosine_similarity(frame[0], audio, dim=-1).numpy(), cmap='jet')
-    axs[1].imshow(image[0])
+    axs[1].imshow(frame[0] @ torch.flatten(audio), cmap='jet')
+    axs[2].imshow(image[0])
     # plt.imshow(cosine_similarity(frame, audio, axis=-1).numpy())
     # Use the Jet heatmap
     # plt.set_cmap('jet')
