@@ -11,7 +11,14 @@ class Args(PrefixProto):
     model.eval()
 
 def show_heatmap(index, logits_audio_image, images, new_w, new_h, cmap='jet'):
-    logits = logits_audio_image[index].reshape(new_w, new_h).detach().cpu().numpy()
+
+    logits = logits_audio_image[index].reshape(new_w,new_h).detach().cpu()
+    logits = torch.nn.functional.interpolate(logits.unsqueeze(0).unsqueeze(0), size=images[index].size[::-1], mode='bicubic', align_corners=True).numpy()[0,0]
+    # logits = logits_audio_image[index].reshape(new_w, new_h).detach().cpu().numpy()
+
+    # upsample logits to match image resolution
+    # logits = logits.repeat(4, axis=0).repeat(4, axis=1)
+
     fig, axs = plt.subplots(1, 2)
     axs[0].imshow(images[index])
     axs[1].imshow(logits, cmap=cmap)
@@ -41,14 +48,14 @@ def main(text_features=None):
 
 if __name__ == "__main__":
 
-    FrameArgs.video_path = "../examples/driving-2.mp4"
+    FrameArgs.video_path = "../examples/beach.mov"
     FrameArgs.patch_size = 128
     FrameArgs.downscale = 32
 
     AudioArgs.path = "../examples/car-ignition.wav"
 
     # Text
-    text = ['ocean']
+    text = ['the waves of the ocean']
     text = [[label] for label in text]
     ((_, _, text_features), _), _ = Args.model(text=text)
 
