@@ -65,20 +65,24 @@ def get_frame_embeddings(model):
     Currently only supports a single frame
     TODO: play with batch size.
     """
-    model.to(FrameArgs.device)
     image_transforms = torchvision.transforms.Compose([
         # tv.transforms.ToTensor(),
         torchvision.transforms.Resize(FrameArgs.IMAGE_SIZE, interpolation=Image.BICUBIC, antialias=True),
         torchvision.transforms.CenterCrop(FrameArgs.IMAGE_SIZE),
         torchvision.transforms.Normalize(FrameArgs.IMAGE_MEAN, FrameArgs.IMAGE_STD)
     ])
-
-    video_reader = io.read_video(FrameArgs.video_path, pts_unit='sec')
-    video_tensor, audio_tensor, video_info = video_reader
-    images = [Image.fromarray(frame.numpy()) for frame in video_tensor[-1:]]
+    model.to(FrameArgs.device)
+    if FrameArgs.video_path.split(".")[-1] == "jpeg":
+        print("Processing the image", FrameArgs.video_path)
+        image = Image.open(FrameArgs.video_path)
+        images = [image]
+    else:
+        print("Processing the video", FrameArgs.video_path)
+        video_reader = io.read_video(FrameArgs.video_path, pts_unit='sec')
+        video_tensor, audio_tensor, video_info = video_reader
+        images = [Image.fromarray(frame.numpy()) for frame in video_tensor[-1:]]
 
     w, h = images[0].size
-
     # time this line
     t0 = time.time()
     patches, stride_x, stride_y = extract_patches_rect(images[0], FrameArgs.patch_size, w // FrameArgs.downscale, h // FrameArgs.downscale)
@@ -158,17 +162,22 @@ def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames"):
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
     MODEL_FILENAME = 'AudioCLIP-Full-Training.pt'
-
+    FrameArgs.video_path = "../examples/beach.mov"
     aclp = AudioCLIP(pretrained=f'assets/{MODEL_FILENAME}')
     aclp.eval()
 
-    # embeddings, new_w, new_h = get_frame_embeddings(aclp)
-    tmp_dir, new_w, new_h, images = save_frame_embeddings(aclp, num_frames=100)
+    embeddings, new_w, new_h, images = get_frame_embeddings(aclp)
+    # tmp_dir, new_w, new_h, images = save_frame_embeddings(aclp, num_frames=100)
 
-    # pre_viz = embeddings.reshape(new_w, new_h, -1)
-    # viz = visualize_embeddings(pre_viz)
+    pre_viz = embeddings.reshape(new_w, new_h, -1)
+    viz = visualize_embeddings(pre_viz)
     #
     # # normalize
-    # viz = (viz - viz.min()) / (viz.max() - viz.min())
-    #
-    # plt.imshow(viz[0])
+    viz = (viz - viz.min()) / (viz.max() - viz.min())
+
+    fig, axs = plt.subplots(1,2)
+    axs[0].imshow(viz[0])
+    axs[0].set_title("PCA Visualization")
+    axs[1].imshow(images[0])
+    axs[1].set_title("Original Frame")
+    plt.show()

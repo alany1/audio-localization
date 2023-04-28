@@ -18,6 +18,7 @@ def get_audio_embeddings(model):
     """
     Get the audio embeddings for the audio file at `audio_path` using the given model.
     """
+    print("Processing audio", AudioArgs.path)
     model.to(AudioArgs.device)
     model.eval()
 
