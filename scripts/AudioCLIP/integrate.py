@@ -75,7 +75,7 @@ def save_movie_overlay(heatmap, images, num_frames, cmap='jet', sample_factor=5)
     for i in tqdm(range(min(len(images), num_frames))):
         fig, ax = plt.subplots()
         ax.imshow(images[i])
-        ax.imshow(heatmap[sample_factor*i//sample_factor], cmap=cmap, alpha=0.3)
+        ax.imshow(heatmap[sample_factor*(i//sample_factor)], cmap=cmap, alpha=0.3)
         canvas = fig.canvas
         canvas.draw()
         output_frames.append(Image.frombytes('RGB', canvas.get_width_height(), canvas.tostring_rgb()))
@@ -106,9 +106,9 @@ if __name__ == "__main__":
     # Take the average of audio and text
     # source_features = (audio_features + text_features) / 2
     source_features = audio_features
-
-    tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=100, skip=True)
-    movie = process_frames(tmp_dir, source_features, new_w, new_h, images, num_frames=100, supervision_feature=text_features)
+    num_frames = 265
+    tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, skip=True)
+    movie = process_frames(tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames, supervision_feature=text_features)
 
     scale_image_text = torch.clamp(Args.model.logit_scale.exp(), min=1.0, max=100.0).to("cpu")
     scale_audio_image = torch.clamp(Args.model.logit_scale_ai.exp(), min=1.0, max=100.0).to("cpu")
@@ -123,8 +123,8 @@ if __name__ == "__main__":
         align_corners=True,
     ).numpy()[0, 0] for frame in movie]
 
-    sample_factor = 10
-    output_movie = save_movie_overlay(movie, images, num_frames=100, sample_factor=sample_factor)
+    sample_factor = 2
+    output_movie = save_movie_overlay(movie, images, num_frames=num_frames, sample_factor=sample_factor)
 
     # Write to movie file
     print("Writing movie to movie.mp4")
