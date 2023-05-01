@@ -12,8 +12,9 @@ from scripts.AudioCLIP.model import AudioCLIP
 import time
 import shutil
 
+
 class FrameArgs(PrefixProto):
-    IMAGE_SIZE = 224 # derived from CLIP, how to upscale the patches basically
+    IMAGE_SIZE = 224  # derived from CLIP, how to upscale the patches basically
     IMAGE_MEAN = 0.48145466, 0.4578275, 0.40821073
     IMAGE_STD = 0.26862954, 0.26130258, 0.27577711
     # IMAGE_MEAN = .5,.5,.5
@@ -38,6 +39,7 @@ def extract_patches_rect(image, patch_size, patches_per_row, patches_per_column)
     patches = torch.stack(patches, dim=0)
     return patches, stride_x, stride_y
 
+
 def visualize_embeddings(embedding):
     """
     Visualize the first three principal components of embedding to correspond to RGB.
@@ -47,7 +49,7 @@ def visualize_embeddings(embedding):
     from sklearn.decomposition import PCA
 
     # Reshape the embedding into (N, embedding_dim)
-    h,w = embedding.shape[:-1]
+    h, w = embedding.shape[:-1]
     embedding = embedding.reshape(-1, embedding.shape[-1])
 
     # Apply PCA to reduce the dimensionality of the embedding
@@ -65,12 +67,16 @@ def get_frame_embeddings(model):
     Currently only supports a single frame
     TODO: play with batch size.
     """
-    image_transforms = torchvision.transforms.Compose([
-        # tv.transforms.ToTensor(),
-        torchvision.transforms.Resize(FrameArgs.IMAGE_SIZE, interpolation=Image.BICUBIC, antialias=True),
-        torchvision.transforms.CenterCrop(FrameArgs.IMAGE_SIZE),
-        torchvision.transforms.Normalize(FrameArgs.IMAGE_MEAN, FrameArgs.IMAGE_STD)
-    ])
+    image_transforms = torchvision.transforms.Compose(
+        [
+            # tv.transforms.ToTensor(),
+            torchvision.transforms.Resize(
+                FrameArgs.IMAGE_SIZE, interpolation=Image.BICUBIC, antialias=True
+            ),
+            torchvision.transforms.CenterCrop(FrameArgs.IMAGE_SIZE),
+            torchvision.transforms.Normalize(FrameArgs.IMAGE_MEAN, FrameArgs.IMAGE_STD),
+        ]
+    )
     model.to(FrameArgs.device)
     if FrameArgs.video_path.split(".")[-1] == "jpeg":
         print("Processing the image", FrameArgs.video_path)
@@ -78,26 +84,33 @@ def get_frame_embeddings(model):
         images = [image]
     else:
         print("Processing the video", FrameArgs.video_path)
-        video_reader = io.read_video(FrameArgs.video_path, pts_unit='sec')
+        video_reader = io.read_video(FrameArgs.video_path, pts_unit="sec")
         video_tensor, audio_tensor, video_info = video_reader
         images = [Image.fromarray(frame.numpy()) for frame in video_tensor[-1:]]
 
     w, h = images[0].size
     # time this line
     t0 = time.time()
-    patches, stride_x, stride_y = extract_patches_rect(images[0], FrameArgs.patch_size, w // FrameArgs.downscale, h // FrameArgs.downscale)
+    patches, stride_x, stride_y = extract_patches_rect(
+        images[0],
+        FrameArgs.patch_size,
+        w // FrameArgs.downscale,
+        h // FrameArgs.downscale,
+    )
     print(f"Extracting patches took {time.time() - t0} seconds")
 
     all_patches = torch.stack([image_transforms(patch) for patch in patches])
 
     image_features = []
     for i in tqdm(range(0, all_patches.shape[0], 8), desc="Extracting image features"):
-        image_features.append(model(image=all_patches[i:i + 8].to(FrameArgs.device)))
+        image_features.append(model(image=all_patches[i : i + 8].to(FrameArgs.device)))
         # move back to CPU to reduce GPU memory usage
         image_features[-1] = image_features[-1][0][0][1].detach().cpu()
     image_features = torch.cat(image_features, dim=0)
 
-    image_features = image_features / torch.linalg.norm(image_features, dim=-1, keepdim=True)
+    image_features = image_features / torch.linalg.norm(
+        image_features, dim=-1, keepdim=True
+    )
 
     new_w = (w - FrameArgs.patch_size) // stride_x + 1
     new_h = (h - FrameArgs.patch_size) // stride_y + 1
@@ -105,79 +118,144 @@ def get_frame_embeddings(model):
     return image_features, new_w, new_h, images
 
 
-def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames"):
+def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True):
     """
     To circumvent memory issues, we write the features to disk in a temporary directory for later use.
 
     We return the path to the temporary directory along with (new_h, new_w, images).
     """
     model.to(FrameArgs.device)
-    image_transforms = torchvision.transforms.Compose([
-        # tv.transforms.ToTensor(),
-        torchvision.transforms.Resize(FrameArgs.IMAGE_SIZE, interpolation=Image.BICUBIC, antialias=True),
-        torchvision.transforms.CenterCrop(FrameArgs.IMAGE_SIZE),
-        torchvision.transforms.Normalize(FrameArgs.IMAGE_MEAN, FrameArgs.IMAGE_STD)
-    ])
+    image_transforms = torchvision.transforms.Compose(
+        [
+            # tv.transforms.ToTensor(),
+            torchvision.transforms.Resize(
+                FrameArgs.IMAGE_SIZE, interpolation=Image.BICUBIC, antialias=True
+            ),
+            torchvision.transforms.CenterCrop(FrameArgs.IMAGE_SIZE),
+            torchvision.transforms.Normalize(FrameArgs.IMAGE_MEAN, FrameArgs.IMAGE_STD),
+        ]
+    )
 
-    video_reader = io.read_video(FrameArgs.video_path, pts_unit='sec')
+    video_reader = io.read_video(FrameArgs.video_path, pts_unit="sec")
     video_tensor, audio_tensor, video_info = video_reader
     images = [Image.fromarray(frame.numpy()) for frame in video_tensor]
 
     w, h = images[0].size
 
-    print("Removing old temporary directory")
-    shutil.rmtree(tmp_dir)
-    print("Creating new temporary directory")
-    os.mkdir(tmp_dir)
+    print("extracting one to get the stride")
+    patches, stride_x, stride_y = extract_patches_rect(
+        images[0],
+        FrameArgs.patch_size,
+        w // FrameArgs.downscale,
+        h // FrameArgs.downscale,
+    )
+    if not skip:
+        try:
+            print("Removing old temporary directory")
+            shutil.rmtree(tmp_dir)
+        except FileNotFoundError:
+            print("No old temporary directory found, proceeding...")
 
-    # time this line
-    for x in tqdm(range(num_frames), desc="Extracting image features for each frame 🎥📸", colour="green"):
-        t0 = time.time()
-        patches, stride_x, stride_y = extract_patches_rect(images[x], FrameArgs.patch_size, w // FrameArgs.downscale,
-                                                           h // FrameArgs.downscale)
-        if x%10==0:
-            print(f"Extracting patches for frame {x+1} took {time.time() - t0} seconds")
+        print("Creating new temporary directory")
+        os.mkdir(tmp_dir)
 
-        all_patches = torch.stack([image_transforms(patch) for patch in patches])
+        # time this line
+        for x in tqdm(
+            range(num_frames),
+            desc="Extracting image features for each frame 🎥📸",
+            colour="green",
+        ):
+            t0 = time.time()
+            patches, stride_x, stride_y = extract_patches_rect(
+                images[x],
+                FrameArgs.patch_size,
+                w // FrameArgs.downscale,
+                h // FrameArgs.downscale,
+            )
+            if x % 10 == 0:
+                print(f"Extracting patches for frame {x+1} took {time.time() - t0} seconds")
 
-        image_features = []
-        for i in range(0, all_patches.shape[0], 8):
-            image_features.append(model(image=all_patches[i:i + 8].to(FrameArgs.device)))
-            # move back to CPU to reduce GPU memory usage
-            image_features[-1] = image_features[-1][0][0][1].detach().cpu()
-        image_features = torch.cat(image_features, dim=0)
+            all_patches = torch.stack([image_transforms(patch) for patch in patches])
 
-        image_features = image_features / torch.linalg.norm(image_features, dim=-1, keepdim=True)
+            image_features = []
+            for i in range(0, all_patches.shape[0], 8):
+                image_features.append(
+                    model(image=all_patches[i : i + 8].to(FrameArgs.device))
+                )
+                # move back to CPU to reduce GPU memory usage
+                image_features[-1] = image_features[-1][0][0][1].detach().cpu()
+            image_features = torch.cat(image_features, dim=0)
 
-        # save the features into the temporary directory
-        torch.save(image_features, os.path.join(tmp_dir, f"frame_{x}.pt"))
+            image_features = image_features / torch.linalg.norm(
+                image_features, dim=-1, keepdim=True
+            )
 
+            # save the features into the temporary directory
+            torch.save(image_features, os.path.join(tmp_dir, f"frame_{x}.pt"))
+    else:
+        print("Skipping feature extraction, loading from disk")
     new_w = (w - FrameArgs.patch_size) // stride_x + 1
     new_h = (h - FrameArgs.patch_size) // stride_y + 1
 
     return tmp_dir, new_w, new_h, images
 
 
+def process_frames(tmp_dir, source_feature, new_w, new_h, images, num_frames=100, supervision_feature=None):
+    """
+    Given the temporary directory, we load the features and generate a series of heatmaps showing similarity
+    with the source_feature.
+
+    If supervision_feature is included, we compute the resultant heatmap as the interaction between source
+    and supervision heatmaps.
+    """
+    movie = [] # list of cmap heatmaps representing the output video
+
+    if supervision_feature is not None:
+        print("Processing frames with supervision feature")
+
+    for x in tqdm(
+        range(min(len(images), num_frames)),
+        desc="Processing frames individually 🎥📸",
+        colour="green",
+    ):
+        embedding = torch.load(os.path.join(tmp_dir, f"frame_{x}.pt")).to(FrameArgs.device)
+
+        # Compute the similarity between the source feature and the current frame
+        similarity = embedding @ source_feature.T
+
+        if supervision_feature is not None:
+            # Compute the similarity between the supervision feature and the current frame
+            supervision_similarity = embedding @ supervision_feature.T
+            # Compute the interaction between the two
+            similarity = similarity * supervision_similarity
+
+        similarity = similarity.reshape(new_h, new_w)
+
+        # scaling and video creation is done by the caller
+        movie.append(similarity.cpu())
+
+    return movie
 
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
-    MODEL_FILENAME = 'AudioCLIP-Full-Training.pt'
+
+    MODEL_FILENAME = "AudioCLIP-Full-Training.pt"
     FrameArgs.video_path = "../examples/beach.mov"
-    aclp = AudioCLIP(pretrained=f'assets/{MODEL_FILENAME}')
+    aclp = AudioCLIP(pretrained=f"assets/{MODEL_FILENAME}")
     aclp.eval()
 
-    embeddings, new_w, new_h, images = get_frame_embeddings(aclp)
-    # tmp_dir, new_w, new_h, images = save_frame_embeddings(aclp, num_frames=100)
+    # embeddings, new_w, new_h, images = get_frame_embeddings(aclp)
+    tmp_dir, new_w, new_h, images = save_frame_embeddings(aclp, num_frames=100)
 
-    pre_viz = embeddings.reshape(new_w, new_h, -1)
-    viz = visualize_embeddings(pre_viz)
+    # pre_viz = embeddings.reshape(new_w, new_h, -1)
+    # viz = visualize_embeddings(pre_viz)
+    # #
+    # # # normalize
+    # viz = (viz - viz.min()) / (viz.max() - viz.min())
     #
-    # # normalize
-    viz = (viz - viz.min()) / (viz.max() - viz.min())
-
-    fig, axs = plt.subplots(1,2)
-    axs[0].imshow(viz[0])
-    axs[0].set_title("PCA Visualization")
-    axs[1].imshow(images[0])
-    axs[1].set_title("Original Frame")
-    plt.show()
+    # fig, axs = plt.subplots(1,2)
+    # axs[0].imshow(viz[0])
+    # axs[0].set_title("PCA Visualization")
+    # axs[1].imshow(images[0])
+    # axs[1].set_title("Original Frame")
+    # plt.show()
