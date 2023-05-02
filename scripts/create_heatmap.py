@@ -13,6 +13,7 @@ def get_heatmap_probabilities(audio_embedding, img_embeddings):
     to the audio
     """
     heatmap = get_similarity(audio_embedding, img_embeddings)
+    print("max similarity: ", torch.max(heatmap))
     heatmap = heatmap / torch.max(heatmap)
     return heatmap
 
