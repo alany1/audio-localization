@@ -12,6 +12,8 @@ from scripts.AudioCLIP.model import AudioCLIP
 import time
 import shutil
 
+SCALE_AUDIO_IMAGE = 68.1320
+SCALE_IMAGE_TEXT = 81.9903
 
 class FrameArgs(PrefixProto):
     IMAGE_SIZE = 224  # derived from CLIP, how to upscale the patches basically
@@ -135,9 +137,10 @@ def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True)
             torchvision.transforms.Normalize(FrameArgs.IMAGE_MEAN, FrameArgs.IMAGE_STD),
         ]
     )
-
+    print("Reading video")
     video_reader = io.read_video(FrameArgs.video_path, pts_unit="sec")
     video_tensor, audio_tensor, video_info = video_reader
+    print("total frames in video", video_tensor.shape[0])
     images = [Image.fromarray(frame.numpy()) for frame in video_tensor]
 
     w, h = images[0].size
@@ -228,7 +231,23 @@ def process_frames(tmp_dir, source_feature, new_w, new_h, images, num_frames=100
             supervision_similarity = embedding @ supervision_feature.T
             # Compute the interaction between the two
             similarity = similarity * supervision_similarity
+        # similarity = SCALE_AUDIO_IMAGE*SCALE_IMAGE_TEXT*similarity
 
+        # Add gradient norm interaction to pay attention to important pixels
+        if x > 5:
+            prev_embedding = torch.load(os.path.join(tmp_dir, f"frame_{x-5}.pt")).to(FrameArgs.device)
+            embedding_dt = torch.linalg.norm(embedding - prev_embedding, dim=-1).unsqueeze(-1)
+
+            # Use embedding_dt to mask out points from similarity that don't exceed some threshold
+            # similarity = torch.where(embedding_dt > 0.35, similarity, torch.zeros_like(similarity))
+            similarity = similarity * embedding_dt
+
+        # Normliaze
+        # similarity = (similarity-similarity.min())/(similarity.max()-similarity.min())
+        # similarity = torch.where(similarity > 0.75, similarity, torch.zeros_like(similarity))
+
+        # get top 25% of similarity, othewrwose set to 0
+        # similarity = torch.where(similarity > torch.quantile(similarity, 0.75), similarity, torch.zeros_like(similarity))
         similarity = similarity.reshape(new_h, new_w)
 
         # scaling and video creation is done by the caller
