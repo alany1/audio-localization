@@ -88,7 +88,7 @@ def save_movie_overlay(heatmap, images, num_frames, cmap='jet', sample_factor=5)
 
 if __name__ == "__main__":
 
-    FrameArgs.video_path = "../examples/cropped_driving_by.mp4"
+    FrameArgs.video_path = "../examples/chicken_piano.mov"
     # FrameArgs.video_path = "../examples/violin-2.jpeg"
     # FrameArgs.video_path = "../examples/beach.mov"
     FrameArgs.patch_size = 128
