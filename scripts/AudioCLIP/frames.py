@@ -132,7 +132,7 @@ def get_frame_embeddings(model):
     return image_features, new_w, new_h, images
 
 
-def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True):
+def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True, scale=1):
     """
     To circumvent memory issues, we write the features to disk in a temporary directory for later use.
 
@@ -153,8 +153,12 @@ def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True)
     video_reader = io.read_video(FrameArgs.video_path, pts_unit="sec")
     video_tensor, audio_tensor, video_info = video_reader
     print("total frames in video", video_tensor.shape[0])
-    images = [Image.fromarray(frame.numpy()) for frame in video_tensor]
+    # Resize these images to be smaller 2x on each axis
+    im0 = Image.fromarray(video_tensor[0].numpy())
+    w, h = im0.size
 
+    print("Resizing images to be ", w//scale, "by", h//scale)
+    images = [Image.fromarray(frame.numpy()).resize((w//scale, h//scale)) for frame in video_tensor]
     w, h = images[0].size
 
     print("extracting one to get the stride")
@@ -164,7 +168,11 @@ def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True)
         w // FrameArgs.downscale,
         h // FrameArgs.downscale,
     )
+
     if not skip:
+        proceed = input("This will overwrite the temporary directory. Proceed? (y/n)")
+        if proceed != "y":
+            raise Exception("Aborting")
         try:
             print("Removing old temporary directory")
             shutil.rmtree(tmp_dir)
@@ -270,7 +278,7 @@ def process_frames(
             )
             embedding_dt = torch.linalg.norm(
                 embedding - prev_embedding, dim=-1
-            ).unsqueeze(-1)**(3/2)
+            ).unsqueeze(-1)
 
             # Use embedding_dt to mask out points from similarity that don't exceed some threshold
             # similarity = torch.where(embedding_dt > 0.35, similarity, torch.zeros_like(similarity))
