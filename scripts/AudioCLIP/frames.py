@@ -270,7 +270,7 @@ def process_frames(
             )
             embedding_dt = torch.linalg.norm(
                 embedding - prev_embedding, dim=-1
-            ).unsqueeze(-1)**2
+            ).unsqueeze(-1)**(3/2)
 
             # Use embedding_dt to mask out points from similarity that don't exceed some threshold
             # similarity = torch.where(embedding_dt > 0.35, similarity, torch.zeros_like(similarity))

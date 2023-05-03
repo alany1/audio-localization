@@ -88,7 +88,7 @@ def save_movie_overlay(heatmap, images, num_frames, cmap='jet', sample_factor=5)
 
 if __name__ == "__main__":
 
-    FrameArgs.video_path = "../examples/cars_driving_by_2.mov"
+    FrameArgs.video_path = "../examples/cropped_driving_by.mp4"
     # FrameArgs.video_path = "../examples/violin-2.jpeg"
     # FrameArgs.video_path = "../examples/beach.mov"
     FrameArgs.patch_size = 128
@@ -109,8 +109,8 @@ if __name__ == "__main__":
     # Take the average of audio and text
     # source_features = (audio_features + text_features) / 2
     source_features = audio_features
-    num_frames = 455
-    tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, tmp_dir='/tmp/car_full_2', skip=True)
+    num_frames = 302
+    tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, tmp_dir='/tmp/car_cropped', skip=False)
     movie = process_frames(tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames) #, supervision_feature=text_features)
 
     scale_image_text = torch.clamp(Args.model.logit_scale.exp(), min=1.0, max=100.0).to("cpu")
