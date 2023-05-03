@@ -21,10 +21,13 @@ def MAP(similarity):
     """
     Scaling function that takes in similarity values and maps them to 0-100 range with
     more emphasis on higher values and less on lower values with a sigmoid-like curve.
+
+    The std affects how slow the image gradient dies out.
+    The topX affects how much of the pixels actually matter.
     """
     std = similarity.std()
-    top25 = torch.topk(similarity[:, 0], k=int(len(similarity) * 0.25)).values.min()
-    return 100 / (1 + torch.exp(-(similarity - top25) / 0.5 * std))
+    top25 = torch.topk(similarity[:, 0], k=int(len(similarity) * 0.1)).values.min()
+    return 100 / (1 + torch.exp(-(similarity - top25) / (std/2)))
 
 
 class FrameArgs(PrefixProto):
