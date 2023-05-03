@@ -11,9 +11,21 @@ from tqdm import tqdm
 from scripts.AudioCLIP.model import AudioCLIP
 import time
 import shutil
+from matplotlib import pyplot as plt
 
 SCALE_AUDIO_IMAGE = 68.1320
 SCALE_IMAGE_TEXT = 81.9903
+
+
+def MAP(similarity):
+    """
+    Scaling function that takes in similarity values and maps them to 0-100 range with
+    more emphasis on higher values and less on lower values with a sigmoid-like curve.
+    """
+    std = similarity.std()
+    top25 = torch.topk(similarity[:, 0], k=int(len(similarity) * 0.25)).values.min()
+    return 100 / (1 + torch.exp(-(similarity - top25) / 0.5*std))
+
 
 class FrameArgs(PrefixProto):
     IMAGE_SIZE = 224  # derived from CLIP, how to upscale the patches basically
@@ -176,7 +188,9 @@ def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True)
                 h // FrameArgs.downscale,
             )
             if x % 10 == 0:
-                print(f"Extracting patches for frame {x+1} took {time.time() - t0} seconds")
+                print(
+                    f"Extracting patches for frame {x+1} took {time.time() - t0} seconds"
+                )
 
             all_patches = torch.stack([image_transforms(patch) for patch in patches])
 
@@ -203,7 +217,15 @@ def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True)
     return tmp_dir, new_w, new_h, images
 
 
-def process_frames(tmp_dir, source_feature, new_w, new_h, images, num_frames=100, supervision_feature=None):
+def process_frames(
+    tmp_dir,
+    source_feature,
+    new_w,
+    new_h,
+    images,
+    num_frames=100,
+    supervision_feature=None,
+):
     """
     Given the temporary directory, we load the features and generate a series of heatmaps showing similarity
     with the source_feature.
@@ -211,7 +233,7 @@ def process_frames(tmp_dir, source_feature, new_w, new_h, images, num_frames=100
     If supervision_feature is included, we compute the resultant heatmap as the interaction between source
     and supervision heatmaps.
     """
-    movie = [] # list of cmap heatmaps representing the output video
+    movie = []  # list of cmap heatmaps representing the output video
 
     if supervision_feature is not None:
         print("Processing frames with supervision feature")
@@ -221,22 +243,34 @@ def process_frames(tmp_dir, source_feature, new_w, new_h, images, num_frames=100
         desc="Processing frames individually 🎥📸",
         colour="green",
     ):
-        embedding = torch.load(os.path.join(tmp_dir, f"frame_{x}.pt")).to(FrameArgs.device)
+        embedding = torch.load(os.path.join(tmp_dir, f"frame_{x}.pt")).to(
+            FrameArgs.device
+        )
 
         # Compute the similarity between the source feature and the current frame
-        similarity = embedding @ source_feature.T
-
+        similarity = SCALE_AUDIO_IMAGE * embedding @ source_feature.T
         if supervision_feature is not None:
             # Compute the similarity between the supervision feature and the current frame
-            supervision_similarity = embedding @ supervision_feature.T
+            supervision_similarity = (
+                SCALE_IMAGE_TEXT * embedding @ supervision_feature.T
+            )
             # Compute the interaction between the two
             similarity = similarity * supervision_similarity
         # similarity = SCALE_AUDIO_IMAGE*SCALE_IMAGE_TEXT*similarity
 
+        if x == 150:
+            print("hey")
+        # Map the similarity using a function that favors higher values and keeps things near the mean low
+        similarity = MAP(similarity)
+
         # Add gradient norm interaction to pay attention to important pixels
-        if x > 5:
-            prev_embedding = torch.load(os.path.join(tmp_dir, f"frame_{x-5}.pt")).to(FrameArgs.device)
-            embedding_dt = torch.linalg.norm(embedding - prev_embedding, dim=-1).unsqueeze(-1)
+        if x > 15:
+            prev_embedding = torch.load(os.path.join(tmp_dir, f"frame_{x-15}.pt")).to(
+                FrameArgs.device
+            )
+            embedding_dt = torch.linalg.norm(
+                embedding - prev_embedding, dim=-1
+            ).unsqueeze(-1)**2
 
             # Use embedding_dt to mask out points from similarity that don't exceed some threshold
             # similarity = torch.where(embedding_dt > 0.35, similarity, torch.zeros_like(similarity))
@@ -254,6 +288,7 @@ def process_frames(tmp_dir, source_feature, new_w, new_h, images, num_frames=100
         movie.append(similarity.cpu())
 
     return movie
+
 
 if __name__ == "__main__":
     from matplotlib import pyplot as plt

@@ -90,16 +90,18 @@ if __name__ == "__main__":
 
     FrameArgs.video_path = "../examples/cars_driving_by_2.mov"
     # FrameArgs.video_path = "../examples/violin-2.jpeg"
+    # FrameArgs.video_path = "../examples/beach.mov"
     FrameArgs.patch_size = 128
     FrameArgs.downscale = 32
 
     # AudioArgs.path = "../examples/violin-sound.wav"
-    AudioArgs.path = "../examples/dirt.mp3"
+    AudioArgs.path = "../examples/car-ignition.wav"
     # AudioArgs.path = "../examples/ocean-wave-1.wav"
+
     audio_features = get_audio_embeddings(Args.model)
 
     # Text
-    text = ["driving"]
+    text = ["driving car"]
     text = [[label] for label in text]
     print("Getting text embeddings...")
     ((_, _, text_features), _), _ = Args.model(text=text)
@@ -107,9 +109,9 @@ if __name__ == "__main__":
     # Take the average of audio and text
     # source_features = (audio_features + text_features) / 2
     source_features = audio_features
-    num_frames = 436
+    num_frames = 455
     tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, tmp_dir='/tmp/car_full_2', skip=True)
-    movie = process_frames(tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames, supervision_feature=text_features)
+    movie = process_frames(tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames) #, supervision_feature=text_features)
 
     scale_image_text = torch.clamp(Args.model.logit_scale.exp(), min=1.0, max=100.0).to("cpu")
     scale_audio_image = torch.clamp(Args.model.logit_scale_ai.exp(), min=1.0, max=100.0).to("cpu")
