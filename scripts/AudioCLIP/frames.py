@@ -2,7 +2,7 @@ import os
 
 import torch
 import torchvision
-from PIL import Image
+from PIL import Image, ImageOps
 from params_proto import Proto, ParamsProto, PrefixProto
 from torchvision import io
 from torchvision.transforms import ToTensor
@@ -24,7 +24,7 @@ def MAP(similarity):
     """
     std = similarity.std()
     top25 = torch.topk(similarity[:, 0], k=int(len(similarity) * 0.25)).values.min()
-    return 100 / (1 + torch.exp(-(similarity - top25) / 0.5*std))
+    return 100 / (1 + torch.exp(-(similarity - top25) / 0.5 * std))
 
 
 class FrameArgs(PrefixProto):
@@ -40,18 +40,49 @@ class FrameArgs(PrefixProto):
     downscale = 32
 
 
+# def extract_patches_rect(image, patch_size, patches_per_row, patches_per_column):
+#     patches = []
+#     width, height = image.size
+#     stride_x = (width - patch_size) // (patches_per_row - 1)
+#     stride_y = (height - patch_size) // (patches_per_column - 1)
+#
+#     for y in range(0, height - patch_size + 1, stride_y):
+#         for x in range(0, width - patch_size + 1, stride_x):
+#             patch = ToTensor()((image.crop((x, y, x + patch_size, y + patch_size))))
+#             patches.append(patch)
+#     patches = torch.stack(patches, dim=0)
+#     return patches, stride_x, stride_y
+
+
 def extract_patches_rect(image, patch_size, patches_per_row, patches_per_column):
     patches = []
     width, height = image.size
-    stride_x = (width - patch_size) // (patches_per_row - 1)
-    stride_y = (height - patch_size) // (patches_per_column - 1)
 
-    for y in range(0, height - patch_size + 1, stride_y):
-        for x in range(0, width - patch_size + 1, stride_x):
-            patch = ToTensor()((image.crop((x, y, x + patch_size, y + patch_size))))
+    padding_x = (patch_size - width % patch_size) % patch_size
+    padding_y = (patch_size - height % patch_size) % patch_size
+    padded_image = ImageOps.expand(
+        image,
+        (
+            padding_x // 2,
+            padding_y // 2,
+            padding_x - padding_x // 2,
+            padding_y - padding_y // 2,
+        ),
+    )
+
+    padded_width, padded_height = padded_image.size
+    stride_x = (padded_width - patch_size) // (patches_per_row - 1)
+    stride_y = (padded_height - patch_size) // (patches_per_column - 1)
+
+    for y in range(0, padded_height - patch_size + 1, stride_y):
+        for x in range(0, padded_width - patch_size + 1, stride_x):
+            patch = ToTensor()(
+                padded_image.crop((x, y, x + patch_size, y + patch_size))
+            )
             patches.append(patch)
+
     patches = torch.stack(patches, dim=0)
-    return patches, stride_x, stride_y
+    return patches, stride_x, stride_y, padded_width, padded_height
 
 
 def visualize_embeddings(embedding):
@@ -105,7 +136,7 @@ def get_frame_embeddings(model):
     w, h = images[0].size
     # time this line
     t0 = time.time()
-    patches, stride_x, stride_y = extract_patches_rect(
+    patches, stride_x, stride_y, padded_w, padded_h = extract_patches_rect(
         images[0],
         FrameArgs.patch_size,
         w // FrameArgs.downscale,
@@ -126,13 +157,15 @@ def get_frame_embeddings(model):
         image_features, dim=-1, keepdim=True
     )
 
-    new_w = (w - FrameArgs.patch_size) // stride_x + 1
-    new_h = (h - FrameArgs.patch_size) // stride_y + 1
+    new_w = (padded_w - FrameArgs.patch_size) // stride_x + 1
+    new_h = (padded_h - FrameArgs.patch_size) // stride_y + 1
 
     return image_features, new_w, new_h, images
 
 
-def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True, scale=1):
+def save_frame_embeddings(
+    model, num_frames=1, tmp_dir="/tmp/frames", skip=True, scale=1
+):
     """
     To circumvent memory issues, we write the features to disk in a temporary directory for later use.
 
@@ -157,12 +190,15 @@ def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True,
     im0 = Image.fromarray(video_tensor[0].numpy())
     w, h = im0.size
 
-    print("Resizing images to be ", w//scale, "by", h//scale)
-    images = [Image.fromarray(frame.numpy()).resize((w//scale, h//scale)) for frame in video_tensor]
+    print("Resizing images to be ", w // scale, "by", h // scale)
+    images = [
+        Image.fromarray(frame.numpy()).resize((w // scale, h // scale))
+        for frame in video_tensor
+    ]
     w, h = images[0].size
 
     print("extracting one to get the stride")
-    patches, stride_x, stride_y = extract_patches_rect(
+    patches, stride_x, stride_y, padded_w, padded_h = extract_patches_rect(
         images[0],
         FrameArgs.patch_size,
         w // FrameArgs.downscale,
@@ -189,7 +225,7 @@ def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True,
             colour="green",
         ):
             t0 = time.time()
-            patches, stride_x, stride_y = extract_patches_rect(
+            patches, stride_x, stride_y, padded_w, padded_h = extract_patches_rect(
                 images[x],
                 FrameArgs.patch_size,
                 w // FrameArgs.downscale,
@@ -219,8 +255,8 @@ def save_frame_embeddings(model, num_frames=1, tmp_dir="/tmp/frames", skip=True,
             torch.save(image_features, os.path.join(tmp_dir, f"frame_{x}.pt"))
     else:
         print("Skipping feature extraction, loading from disk")
-    new_w = (w - FrameArgs.patch_size) // stride_x + 1
-    new_h = (h - FrameArgs.patch_size) // stride_y + 1
+    new_w = (padded_w - FrameArgs.patch_size) // stride_x + 1
+    new_h = (padded_h - FrameArgs.patch_size) // stride_y + 1
 
     return tmp_dir, new_w, new_h, images
 
@@ -271,18 +307,18 @@ def process_frames(
         # Map the similarity using a function that favors higher values and keeps things near the mean low
         similarity = MAP(similarity)
 
-        # Add gradient norm interaction to pay attention to important pixels
-        if x > 15:
-            prev_embedding = torch.load(os.path.join(tmp_dir, f"frame_{x-15}.pt")).to(
-                FrameArgs.device
-            )
-            embedding_dt = torch.linalg.norm(
-                embedding - prev_embedding, dim=-1
-            ).unsqueeze(-1)
-
-            # Use embedding_dt to mask out points from similarity that don't exceed some threshold
-            # similarity = torch.where(embedding_dt > 0.35, similarity, torch.zeros_like(similarity))
-            similarity = similarity * embedding_dt
+        # # Add gradient norm interaction to pay attention to important pixels
+        # if x > 15:
+        #     prev_embedding = torch.load(os.path.join(tmp_dir, f"frame_{x-15}.pt")).to(
+        #         FrameArgs.device
+        #     )
+        #     embedding_dt = torch.linalg.norm(
+        #         embedding - prev_embedding, dim=-1
+        #     ).unsqueeze(-1)
+        #
+        #     # Use embedding_dt to mask out points from similarity that don't exceed some threshold
+        #     # similarity = torch.where(embedding_dt > 0.35, similarity, torch.zeros_like(similarity))
+        #     similarity = similarity * embedding_dt
 
         # Normliaze
         # similarity = (similarity-similarity.min())/(similarity.max()-similarity.min())

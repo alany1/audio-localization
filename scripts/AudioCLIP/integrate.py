@@ -108,10 +108,10 @@ if __name__ == "__main__":
 
     # Take the average of audio and text
     # source_features = (audio_features + text_features) / 2
-    source_features = text_features
+    source_features = audio_features
     num_frames = 403
-    tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, tmp_dir='/tmp/chicken', skip=False, scale=2)
-    movie = process_frames(tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames) # , supervision_feature=text_features)
+    tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, tmp_dir='/tmp/chicken', skip=True, scale=4)
+    movie = process_frames(tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames) #, supervision_feature=text_features)
 
     scale_image_text = torch.clamp(Args.model.logit_scale.exp(), min=1.0, max=100.0).to("cpu")
     scale_audio_image = torch.clamp(Args.model.logit_scale_ai.exp(), min=1.0, max=100.0).to("cpu")
