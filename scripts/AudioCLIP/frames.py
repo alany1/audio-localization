@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import torch
 import torchvision
 from PIL import Image, ImageOps
@@ -16,6 +17,10 @@ from matplotlib import pyplot as plt
 SCALE_AUDIO_IMAGE = 68.1320
 SCALE_IMAGE_TEXT = 81.9903
 
+# UNCOMMENT FOR TESTING
+path = "AudioCLIP-Full-Training.pt"
+model = AudioCLIP(pretrained=f"assets/{path}")
+model.eval()
 
 def MAP(similarity):
     """
@@ -264,6 +269,33 @@ def save_frame_embeddings(
     return tmp_dir, new_w, new_h, images
 
 
+def negative_sample(source_feature, embedding, k=1, threshold=.1):
+    """
+    Given a source feature, we sample k negative examples from the embedding.
+
+    embedding: [num_patches, embedding_dim]
+    Return: negative_sample; size of [k, embedding_dim]
+    """
+
+    negatives = []
+    for _ in tqdm(range(k), desc=f"Sampling {k} negative examples"):
+        # Sample a random patch
+        while True:
+            idx = np.random.randint(embedding.shape[0])
+            negative = embedding[idx]
+
+            # Reject if the patch is too similar to the source feature
+            if negative @ source_feature.T >= threshold:
+                continue
+
+            negatives.append(negative)
+            break
+    return torch.stack(negatives)
+
+
+
+
+
 def process_frames(
     tmp_dir,
     source_feature,
@@ -272,6 +304,7 @@ def process_frames(
     images,
     num_frames=100,
     supervision_feature=None,
+    lambda_=.45
 ):
     """
     Given the temporary directory, we load the features and generate a series of heatmaps showing similarity
@@ -295,7 +328,9 @@ def process_frames(
         )
 
         # Compute the similarity between the source feature and the current frame
-        similarity = SCALE_AUDIO_IMAGE * embedding @ source_feature.T
+        unscaled_similarity = embedding @ source_feature.T
+        similarity = SCALE_AUDIO_IMAGE * unscaled_similarity
+
         if supervision_feature is not None:
             # Compute the similarity between the supervision feature and the current frame
             supervision_similarity = (
@@ -304,6 +339,21 @@ def process_frames(
             # Compute the interaction between the two
             similarity = similarity * supervision_similarity
         # similarity = SCALE_AUDIO_IMAGE*SCALE_IMAGE_TEXT*similarity
+
+        # Negative sampling (random): select a random patch, subtract lambda*similarity to that negative sample.
+        # Threshold will be the lower 25% of the similarity values.
+        threshold = torch.quantile(unscaled_similarity, 0.25)
+        negatives = negative_sample(source_feature, embedding, k=25, threshold=threshold)
+
+        negative_text = ["piano"]
+        ((_, _, negative_text_features), _), _ = model(text=negative_text)
+        negative_text_features = negative_text_features.to('cuda')
+        # Penalty is lambda * avg similarity to the negative samples
+        penalty = .5*SCALE_AUDIO_IMAGE*(torch.mean(embedding @ negatives.T, dim=-1)) + .5*SCALE_IMAGE_TEXT*torch.mean(embedding @ negative_text_features.T, dim=-1)
+
+        # Add the penalty to the similarity`
+        similarity = similarity - lambda_ * penalty.unsqueeze(-1)
+
 
         if x == 150:
             print("hey")
