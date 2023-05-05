@@ -22,6 +22,7 @@ path = "AudioCLIP-Full-Training.pt"
 model = AudioCLIP(pretrained=f"assets/{path}")
 model.eval()
 
+
 def MAP(similarity):
     """
     Scaling function that takes in similarity values and maps them to 0-100 range with
@@ -31,8 +32,8 @@ def MAP(similarity):
     The topX affects how much of the pixels actually matter.
     """
     std = similarity.std()
-    top25 = torch.topk(similarity[:, 0], k=int(len(similarity) * 0.1)).values.min()
-    return 100 / (1 + torch.exp(-(similarity - top25) / (std/2)))
+    top25 = torch.topk(similarity[:, 0], k=int(len(similarity) * 0.05)).values.min()
+    return 100 / (1 + torch.exp(-(similarity - top25) / (std / 16)))
 
 
 class FrameArgs(PrefixProto):
@@ -269,7 +270,7 @@ def save_frame_embeddings(
     return tmp_dir, new_w, new_h, images
 
 
-def negative_sample(source_feature, embedding, k=1, threshold=.1):
+def negative_sample(source_feature, embedding, k=1, threshold=0.1, disable_pbar=True):
     """
     Given a source feature, we sample k negative examples from the embedding.
 
@@ -278,7 +279,9 @@ def negative_sample(source_feature, embedding, k=1, threshold=.1):
     """
 
     negatives = []
-    for _ in tqdm(range(k), desc=f"Sampling {k} negative examples"):
+    for _ in tqdm(
+        range(k), desc=f"Sampling {k} negative examples", disable=disable_pbar
+    ):
         # Sample a random patch
         while True:
             idx = np.random.randint(embedding.shape[0])
@@ -293,9 +296,6 @@ def negative_sample(source_feature, embedding, k=1, threshold=.1):
     return torch.stack(negatives)
 
 
-
-
-
 def process_frames(
     tmp_dir,
     source_feature,
@@ -304,7 +304,7 @@ def process_frames(
     images,
     num_frames=100,
     supervision_feature=None,
-    lambda_=.45
+    lambda_=0.1,
 ):
     """
     Given the temporary directory, we load the features and generate a series of heatmaps showing similarity
@@ -333,8 +333,10 @@ def process_frames(
 
         if supervision_feature is not None:
             # Compute the similarity between the supervision feature and the current frame
-            supervision_similarity = (
-                SCALE_IMAGE_TEXT * embedding @ supervision_feature.T
+            supervision_similarity = torch.mean(
+                SCALE_IMAGE_TEXT * embedding @ supervision_feature.T,
+                dim=-1,
+                keepdim=True,
             )
             # Compute the interaction between the two
             similarity = similarity * supervision_similarity
@@ -342,20 +344,26 @@ def process_frames(
 
         # Negative sampling (random): select a random patch, subtract lambda*similarity to that negative sample.
         # Threshold will be the lower 25% of the similarity values.
-        threshold = torch.quantile(unscaled_similarity, 0.25)
-        negatives = negative_sample(source_feature, embedding, k=25, threshold=threshold)
+        threshold = torch.quantile(unscaled_similarity, 0.7)
+        negatives = negative_sample(
+            source_feature, embedding, k=40, threshold=threshold
+        )
 
-        negative_text = ["piano"]
-        ((_, _, negative_text_features), _), _ = model(text=negative_text)
-        negative_text_features = negative_text_features.to('cuda')
+        # negative_text = ["piano", "music"]
+        # ((_, _, negative_text_features), _), _ = model(text=negative_text)
+        # negative_text_features = negative_text_features.to('cuda')
         # Penalty is lambda * avg similarity to the negative samples
-        penalty = .5*SCALE_AUDIO_IMAGE*(torch.mean(embedding @ negatives.T, dim=-1)) + .5*SCALE_IMAGE_TEXT*torch.mean(embedding @ negative_text_features.T, dim=-1)
+        penalty = SCALE_AUDIO_IMAGE * (
+            torch.mean(embedding @ negatives.T, dim=-1)
+        )  #  + SCALE_IMAGE_TEXT*torch.mean(embedding @ negative_text_features.T, dim=-1)
 
         # Add the penalty to the similarity`
+        # similarity = similarity - lambda_ * penalty.unsqueeze(-1)
+        # similarity = MAP(similarity) - MAP(lambda_ * penalty.unsqueeze(-1))
+        # For some reason, this one works the best...
         similarity = similarity - lambda_ * penalty.unsqueeze(-1)
 
-
-        if x == 150:
+        if x == 300:
             print("hey")
         # Map the similarity using a function that favors higher values and keeps things near the mean low
         similarity = MAP(similarity)
