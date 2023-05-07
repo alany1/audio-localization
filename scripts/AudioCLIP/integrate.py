@@ -88,7 +88,9 @@ def save_movie_overlay(heatmap, images, num_frames, cmap='jet', sample_factor=5)
 
 if __name__ == "__main__":
 
-    FrameArgs.video_path = "../examples/chicken_piano.mov"
+    # FrameArgs.video_path = "../examples/cropped_driving_by.mp4"
+    FrameArgs.video_path = "../examples/driving-2.mp4"
+    # FrameArgs.video_path = "../examples/chicken_piano.mov"
     # FrameArgs.video_path = "../examples/violin.mov"
     # FrameArgs.video_path = "../examples/beach.mov"
     FrameArgs.patch_size = 128
@@ -96,26 +98,29 @@ if __name__ == "__main__":
 
     # AudioArgs.path = "../examples/violin-sound.wav"
     # AudioArgs.path = "../examples/chicken.mp3"
-    AudioArgs.path = "../examples/piano.wav"
-    # AudioArgs.path = "../examples/ocean-wave-1.wav"
+    # AudioArgs.path = "../examples/piano.wav"
+    AudioArgs.path = "../examples/ocean-wave-1.wav"
+    # AudioArgs.path = "../examples/dirt.mp3"
+    # AudioArgs.path = "../examples/car-ignition.wav"
 
     audio_features = get_audio_embeddings(Args.model)
 
     # Text
     # text = ["chicken", "rooster", "hen"]
-    text = ["piano", "music", "instrument"]
+    text = ["ocean waves"]#, "music", "instrument"]
+    # text = ["car", "vehicle", "automobile"]
     text = [[label] for label in text]
     print("Getting text embeddings...")
     ((_, _, text_features), _), _ = Args.model(text=text)
 
     # Take the average of audio and text
     # source_features = (audio_features + text_features) / 2
-    source_features = audio_features
+    source_features = text_features
 
-    num_frames = 403
+    num_frames = 141
     # num_frames = 36
 
-    tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, tmp_dir='/tmp/chicken', skip=True, scale=4)
+    tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, tmp_dir='/tmp/driving_2', skip=True, scale=4)
     # tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, tmp_dir='/tmp/violin', skip=True, scale=4)
     movie = process_frames(tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames)# , supervision_feature=text_features)
 
@@ -124,6 +129,8 @@ if __name__ == "__main__":
 
     # movie = [(scale_image_text * frame).detach() for frame in movie]
     movie = [(scale_audio_image * scale_image_text * frame).detach() for frame in movie]
+    # movie = [frame.detach() for frame in movie]
+
     # convert to pil image with cmap jet
     movie = [torch.nn.functional.interpolate(
         frame.unsqueeze(0).unsqueeze(0),

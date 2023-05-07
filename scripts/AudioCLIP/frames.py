@@ -33,7 +33,7 @@ def MAP(similarity):
     """
     std = similarity.std()
     top25 = torch.topk(similarity[:, 0], k=int(len(similarity) * 0.05)).values.min()
-    return 100 / (1 + torch.exp(-(similarity - top25) / (std / 16)))
+    return 100 / (1 + torch.exp(-(similarity - top25) / (std/12)))
 
 
 class FrameArgs(PrefixProto):
@@ -304,7 +304,7 @@ def process_frames(
     images,
     num_frames=100,
     supervision_feature=None,
-    lambda_=0.1,
+    lambda_=0.2,
 ):
     """
     Given the temporary directory, we load the features and generate a series of heatmaps showing similarity
@@ -339,7 +339,8 @@ def process_frames(
                 keepdim=True,
             )
             # Compute the interaction between the two
-            similarity = similarity * supervision_similarity
+            # similarity = similarity * supervision_similarity
+            similarity = (similarity + supervision_similarity)/2
         # similarity = SCALE_AUDIO_IMAGE*SCALE_IMAGE_TEXT*similarity
 
         # Negative sampling (random): select a random patch, subtract lambda*similarity to that negative sample.
