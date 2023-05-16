@@ -4,29 +4,36 @@ import numpy as np
 if __name__ == "__main__":
 
     import cv2
+
     print("hey")
-    print('new')
+    print("new")
     # Open the first video
-    video1 = cv2.VideoCapture('results/output_frames.mp4')
+    video1 = cv2.VideoCapture("results/output_frames.mp4")
 
     # Open the second video
-    video2 = cv2.VideoCapture('results/output.mp4')
+    video2 = cv2.VideoCapture("results/output.mp4")
 
     # Get the frame count and frame size of the first video
     frame_count1 = int(video1.get(cv2.CAP_PROP_FRAME_COUNT))
-    frame_size1 = (int(video1.get(cv2.CAP_PROP_FRAME_WIDTH)), int(video1.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+    frame_size1 = (
+        int(video1.get(cv2.CAP_PROP_FRAME_WIDTH)),
+        int(video1.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+    )
 
     # Get the frame count and frame size of the second video
     frame_count2 = int(video2.get(cv2.CAP_PROP_FRAME_COUNT))
-    frame_size2 = (int(video2.get(cv2.CAP_PROP_FRAME_WIDTH)), int(video2.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+    frame_size2 = (
+        int(video2.get(cv2.CAP_PROP_FRAME_WIDTH)),
+        int(video2.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+    )
 
     # Set the output video size
     # output_size = (224, 224)
     output_size = frame_size1
 
     # Create the output video writer
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter('results/output_overlay.mp4', fourcc, 30, output_size)
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter("results/output_overlay.mp4", fourcc, 30, output_size)
     print("starting loop")
     # Loop through the frames of both videos
     for i in range(min(frame_count1, frame_count2)):

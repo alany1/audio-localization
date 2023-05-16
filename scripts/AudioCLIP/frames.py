@@ -33,7 +33,7 @@ def MAP(similarity):
     """
     std = similarity.std()
     top25 = torch.topk(similarity[:, 0], k=int(len(similarity) * 0.05)).values.min()
-    return 100 / (1 + torch.exp(-(similarity - top25) / (std/12)))
+    return 100 / (1 + torch.exp(-(similarity - top25) / (std / 12)))
 
 
 class FrameArgs(PrefixProto):
@@ -340,7 +340,7 @@ def process_frames(
             )
             # Compute the interaction between the two
             # similarity = similarity * supervision_similarity
-            similarity = (similarity + supervision_similarity)/2
+            similarity = (similarity + supervision_similarity) / 2
         # similarity = SCALE_AUDIO_IMAGE*SCALE_IMAGE_TEXT*similarity
 
         # Negative sampling (random): select a random patch, subtract lambda*similarity to that negative sample.

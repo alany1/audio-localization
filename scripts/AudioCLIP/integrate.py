@@ -3,10 +3,16 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from params_proto import Proto, ParamsProto, PrefixProto
-from frames import FrameArgs, get_frame_embeddings, save_frame_embeddings, process_frames
+from frames import (
+    FrameArgs,
+    get_frame_embeddings,
+    save_frame_embeddings,
+    process_frames,
+)
 from audio import AudioArgs, get_audio_embeddings
 from scripts.AudioCLIP.model import AudioCLIP
 from tqdm import tqdm
+
 
 class Args(PrefixProto):
     path = "AudioCLIP-Full-Training.pt"
@@ -65,25 +71,28 @@ def main(text_features=None):
 
     return logits_audio_image, new_w, new_h, images
 
-def save_movie_overlay(heatmap, images, num_frames, cmap='jet', sample_factor=5):
+
+def save_movie_overlay(heatmap, images, num_frames, cmap="jet", sample_factor=5):
     """
     Save movie as heatmap overlayed on top of images.
     """
     from PIL import Image
+
     # for each image, overlay the heatmap on top of it and use it as a frame in output video
     output_frames = []
     for i in tqdm(range(min(len(images), num_frames))):
         fig, ax = plt.subplots()
         ax.imshow(images[i])
-        ax.imshow(heatmap[sample_factor*(i//sample_factor)], cmap=cmap, alpha=0.3)
+        ax.imshow(heatmap[sample_factor * (i // sample_factor)], cmap=cmap, alpha=0.3)
         canvas = fig.canvas
         canvas.draw()
-        output_frames.append(Image.frombytes('RGB', canvas.get_width_height(), canvas.tostring_rgb()))
+        output_frames.append(
+            Image.frombytes("RGB", canvas.get_width_height(), canvas.tostring_rgb())
+        )
 
     plt.close()
 
     return output_frames
-
 
 
 if __name__ == "__main__":
@@ -107,7 +116,7 @@ if __name__ == "__main__":
 
     # Text
     # text = ["chicken", "rooster", "hen"]
-    text = ["ocean waves"]#, "music", "instrument"]
+    text = ["ocean waves"]  # , "music", "instrument"]
     # text = ["car", "vehicle", "automobile"]
     text = [[label] for label in text]
     print("Getting text embeddings...")
@@ -120,31 +129,44 @@ if __name__ == "__main__":
     num_frames = 141
     # num_frames = 36
 
-    tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, tmp_dir='/tmp/driving_2', skip=True, scale=4)
+    tmp_dir, new_w, new_h, images = save_frame_embeddings(
+        Args.model, num_frames=num_frames, tmp_dir="/tmp/driving_2", skip=True, scale=4
+    )
     # tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, tmp_dir='/tmp/violin', skip=True, scale=4)
-    movie = process_frames(tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames)# , supervision_feature=text_features)
+    movie = process_frames(
+        tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames
+    )  # , supervision_feature=text_features)
 
-    scale_image_text = torch.clamp(Args.model.logit_scale.exp(), min=1.0, max=100.0).to("cpu")
-    scale_audio_image = torch.clamp(Args.model.logit_scale_ai.exp(), min=1.0, max=100.0).to("cpu")
+    scale_image_text = torch.clamp(Args.model.logit_scale.exp(), min=1.0, max=100.0).to(
+        "cpu"
+    )
+    scale_audio_image = torch.clamp(
+        Args.model.logit_scale_ai.exp(), min=1.0, max=100.0
+    ).to("cpu")
 
     # movie = [(scale_image_text * frame).detach() for frame in movie]
     movie = [(scale_audio_image * scale_image_text * frame).detach() for frame in movie]
     # movie = [frame.detach() for frame in movie]
 
     # convert to pil image with cmap jet
-    movie = [torch.nn.functional.interpolate(
-        frame.unsqueeze(0).unsqueeze(0),
-        size=images[0].size[::-1],
-        mode="bicubic",
-        align_corners=True,
-    ).numpy()[0, 0] for frame in movie]
+    movie = [
+        torch.nn.functional.interpolate(
+            frame.unsqueeze(0).unsqueeze(0),
+            size=images[0].size[::-1],
+            mode="bicubic",
+            align_corners=True,
+        ).numpy()[0, 0]
+        for frame in movie
+    ]
 
     sample_factor = 2
-    output_movie = save_movie_overlay(movie, images, num_frames=num_frames, sample_factor=sample_factor)
+    output_movie = save_movie_overlay(
+        movie, images, num_frames=num_frames, sample_factor=sample_factor
+    )
 
     # Write to movie file
     print("Writing movie to movie.mp4")
-    with imageio.get_writer('movie.mp4', fps=30) as writer:
+    with imageio.get_writer("movie.mp4", fps=30) as writer:
         for i, pil_image in enumerate(output_movie):
             # convert the PIL image to a numpy array
             numpy_image = np.array(pil_image)
