@@ -61,6 +61,14 @@ movie = process_frames(
         tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames
     )
 
+# Optionally, you can include text-features as well
+movie = process_frames(
+        tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames, supervision_feature=text_features
+    )
+```
+
+Finally, we can save the movie as a GIF or MP4.
+```
 
 # Upsample the movie to the original resolution
 movie = [
