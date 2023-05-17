@@ -67,7 +67,7 @@ movie = process_frames(
     )
 ```
 
-Finally, we can save the movie as a GIF or MP4.
+Finally, we can save the movie as MP4.
 ```
 
 # Upsample the movie to the original resolution
