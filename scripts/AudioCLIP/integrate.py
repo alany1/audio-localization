@@ -28,14 +28,9 @@ def show_heatmap(index, logits_audio_image, images, new_w, new_h, cmap="jet"):
         mode="bicubic",
         align_corners=True,
     ).numpy()[0, 0]
-    # logits = logits_audio_image[index].reshape(new_w, new_h).detach().cpu().numpy()
-
-    # upsample logits to match image resolution
-    # logits = logits.repeat(4, axis=0).repeat(4, axis=1)
 
     fig, axs = plt.subplots(1, 2)
     axs[0].imshow(images[index])
-    # axs[1].imshow(logits, cmap=cmap)
 
     # Overlay logits with cmap=cmap and the images[index] on axs[2]
     axs[1].imshow(images[index])
@@ -102,6 +97,7 @@ if __name__ == "__main__":
     # FrameArgs.video_path = "../examples/chicken_piano.mov"
     # FrameArgs.video_path = "../examples/violin.mov"
     # FrameArgs.video_path = "../examples/beach.mov"
+
     FrameArgs.patch_size = 128
     FrameArgs.downscale = 32
 
@@ -132,7 +128,6 @@ if __name__ == "__main__":
     tmp_dir, new_w, new_h, images = save_frame_embeddings(
         Args.model, num_frames=num_frames, tmp_dir="/tmp/driving_2", skip=True, scale=4
     )
-    # tmp_dir, new_w, new_h, images = save_frame_embeddings(Args.model, num_frames=num_frames, tmp_dir='/tmp/violin', skip=True, scale=4)
     movie = process_frames(
         tmp_dir, source_features, new_w, new_h, images, num_frames=num_frames
     )  # , supervision_feature=text_features)
@@ -144,9 +139,7 @@ if __name__ == "__main__":
         Args.model.logit_scale_ai.exp(), min=1.0, max=100.0
     ).to("cpu")
 
-    # movie = [(scale_image_text * frame).detach() for frame in movie]
     movie = [(scale_audio_image * scale_image_text * frame).detach() for frame in movie]
-    # movie = [frame.detach() for frame in movie]
 
     # convert to pil image with cmap jet
     movie = [
@@ -173,13 +166,3 @@ if __name__ == "__main__":
             # write the numpy array to the movie file
             writer.append_data(numpy_image)
 
-    # logits_audio_image, new_w, new_h, images = main()
-    # logits_image_text, new_w, new_h, images = main(text_features)
-    #
-    # logits = logits_audio_image * logits_image_text
-    # # logits = logits_audio_image
-    # # logits = logits_image_text
-    # # Normalize logits
-    # logits = logits / torch.linalg.norm(logits, dim=-1, keepdim=True)
-    #
-    # show_heatmap(0, logits, images, new_h, new_w)

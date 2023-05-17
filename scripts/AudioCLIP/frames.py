@@ -17,12 +17,6 @@ from matplotlib import pyplot as plt
 SCALE_AUDIO_IMAGE = 68.1320
 SCALE_IMAGE_TEXT = 81.9903
 
-# UNCOMMENT FOR TESTING
-path = "AudioCLIP-Full-Training.pt"
-model = AudioCLIP(pretrained=f"assets/{path}")
-model.eval()
-
-
 def MAP(similarity):
     """
     Scaling function that takes in similarity values and maps them to 0-100 range with
@@ -40,28 +34,11 @@ class FrameArgs(PrefixProto):
     IMAGE_SIZE = 224  # derived from CLIP, how to upscale the patches basically
     IMAGE_MEAN = 0.48145466, 0.4578275, 0.40821073
     IMAGE_STD = 0.26862954, 0.26130258, 0.27577711
-    # IMAGE_MEAN = .5,.5,.5
-    # IMAGE_STD = .5,.5,.5
 
     device = "cuda"
     video_path = "../examples/beach.mov"
     patch_size = 128
     downscale = 32
-
-
-# def extract_patches_rect(image, patch_size, patches_per_row, patches_per_column):
-#     patches = []
-#     width, height = image.size
-#     stride_x = (width - patch_size) // (patches_per_row - 1)
-#     stride_y = (height - patch_size) // (patches_per_column - 1)
-#
-#     for y in range(0, height - patch_size + 1, stride_y):
-#         for x in range(0, width - patch_size + 1, stride_x):
-#             patch = ToTensor()((image.crop((x, y, x + patch_size, y + patch_size))))
-#             patches.append(patch)
-#     patches = torch.stack(patches, dim=0)
-#     return patches, stride_x, stride_y
-
 
 def extract_patches_rect(image, patch_size, patches_per_row, patches_per_column):
     patches = []
@@ -123,7 +100,6 @@ def get_frame_embeddings(model):
     """
     image_transforms = torchvision.transforms.Compose(
         [
-            # tv.transforms.ToTensor(),
             torchvision.transforms.Resize(
                 FrameArgs.IMAGE_SIZE, interpolation=Image.BICUBIC, antialias=True
             ),
@@ -143,7 +119,7 @@ def get_frame_embeddings(model):
         images = [Image.fromarray(frame.numpy()) for frame in video_tensor[-1:]]
 
     w, h = images[0].size
-    # time this line
+
     t0 = time.time()
     patches, stride_x, stride_y, padded_w, padded_h = extract_patches_rect(
         images[0],
@@ -183,7 +159,6 @@ def save_frame_embeddings(
     model.to(FrameArgs.device)
     image_transforms = torchvision.transforms.Compose(
         [
-            # tv.transforms.ToTensor(),
             torchvision.transforms.Resize(
                 FrameArgs.IMAGE_SIZE, interpolation=Image.BICUBIC, antialias=True
             ),
@@ -339,9 +314,7 @@ def process_frames(
                 keepdim=True,
             )
             # Compute the interaction between the two
-            # similarity = similarity * supervision_similarity
             similarity = (similarity + supervision_similarity) / 2
-        # similarity = SCALE_AUDIO_IMAGE*SCALE_IMAGE_TEXT*similarity
 
         # Negative sampling (random): select a random patch, subtract lambda*similarity to that negative sample.
         # Threshold will be the lower 25% of the similarity values.
@@ -350,44 +323,15 @@ def process_frames(
             source_feature, embedding, k=40, threshold=threshold
         )
 
-        # negative_text = ["piano", "music"]
-        # ((_, _, negative_text_features), _), _ = model(text=negative_text)
-        # negative_text_features = negative_text_features.to('cuda')
         # Penalty is lambda * avg similarity to the negative samples
         penalty = SCALE_AUDIO_IMAGE * (
             torch.mean(embedding @ negatives.T, dim=-1)
-        )  #  + SCALE_IMAGE_TEXT*torch.mean(embedding @ negative_text_features.T, dim=-1)
+        )
 
-        # Add the penalty to the similarity`
-        # similarity = similarity - lambda_ * penalty.unsqueeze(-1)
-        # similarity = MAP(similarity) - MAP(lambda_ * penalty.unsqueeze(-1))
-        # For some reason, this one works the best...
         similarity = similarity - lambda_ * penalty.unsqueeze(-1)
 
-        if x == 300:
-            print("hey")
         # Map the similarity using a function that favors higher values and keeps things near the mean low
         similarity = MAP(similarity)
-
-        # # Add gradient norm interaction to pay attention to important pixels
-        # if x > 15:
-        #     prev_embedding = torch.load(os.path.join(tmp_dir, f"frame_{x-15}.pt")).to(
-        #         FrameArgs.device
-        #     )
-        #     embedding_dt = torch.linalg.norm(
-        #         embedding - prev_embedding, dim=-1
-        #     ).unsqueeze(-1)
-        #
-        #     # Use embedding_dt to mask out points from similarity that don't exceed some threshold
-        #     # similarity = torch.where(embedding_dt > 0.35, similarity, torch.zeros_like(similarity))
-        #     similarity = similarity * embedding_dt
-
-        # Normliaze
-        # similarity = (similarity-similarity.min())/(similarity.max()-similarity.min())
-        # similarity = torch.where(similarity > 0.75, similarity, torch.zeros_like(similarity))
-
-        # get top 25% of similarity, othewrwose set to 0
-        # similarity = torch.where(similarity > torch.quantile(similarity, 0.75), similarity, torch.zeros_like(similarity))
         similarity = similarity.reshape(new_h, new_w)
 
         # scaling and video creation is done by the caller

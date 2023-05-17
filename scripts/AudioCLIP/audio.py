@@ -12,7 +12,6 @@ class AudioArgs(PrefixProto):
     path = "../examples/ocean-wave-1.wav"
     device = "cuda"
     sample_rate = 44100
-    # sample_rate = 22000
 
 
 def get_audio_embeddings(model):
